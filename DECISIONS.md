@@ -518,3 +518,30 @@ Reject a nonfinite recomputed cross-check value explicitly: a finite tiny raw
 duration can otherwise overflow throughput, and inf > inf is false when comparing
 an infinite difference against an infinite tolerance. This must never publish an
 infinite rate as a validated metric.
+
+## M5 — sequential M5–M8 authorization and quality contract
+
+The owner explicitly authorized completing and pushing M5 through M8 in order,
+overriding the default one-milestone-per-session protocol. Keep independent
+milestone commits/PRs and run the required checks at each boundary. M4's final
+macOS job was cancelled before any steps ran, not a code failure; rerun it and
+merge only behind required checks. Do not weaken protection.
+
+Pin lm-eval[api] to 0.4.9.2 for its versioned CLI and gsm8k task config. The
+builder uses local-completions, five fixed few-shot examples, seed, greedy
+raw completions and 512 maximum generation tokens. Full evaluation is 1319
+problems; an explicit integer limit means first N dataset rows. No chat template
+or thinking setting is applied; these are relative precision comparisons, not
+absolute model capability scores. The harness and datasets were not run locally.
+Sources: https://github.com/EleutherAI/lm-evaluation-harness/tree/v0.4.9.2 .
+
+The provisional sample schema has one row per document/filter and numeric
+exact_match. Require both strict-match and flexible-extract, unique IDs and
+nonempty document/prompt hashes. Pair by IDs, not file order, and reject changed
+hashes. Accuracy uses Wilson; discordant paired counts use exact McNemar from
+stats.py. Greedy agreement requires actual integer token IDs returned via the
+pinned vLLM logprobs token_id:N option; never tokenize decoded text heuristically.
+The 200 fixed arithmetic prompts are synthetic agreement probes. Divergence is
+zero-based, excludes exact matches, and uses the shorter length for strict
+prefixes. A no-divergence mean is absent, not fabricated zero.
+Live harness/vLLM paths: not run (needs GPU).

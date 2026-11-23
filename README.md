@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M4 benchmark adapter and metrics.**
+constraint-based recommendation. **Current stage: M5 quality evaluation.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -40,7 +40,8 @@ not need those tools. It never loads a model or imports vLLM.
 - [x] M2 descriptive statistics, seeded bootstrap/permutation tests, Holm, Wilson, McNemar, and MDE.
 - [x] M3 owned process groups, readiness, provisional resolved logs, safety checks, and load/factor probes.
 - [x] M4 benchmark argv snapshots, detailed-result parser, metric cross-checks, failure classification, and measured-capacity open-loop rates.
-- [ ] M5–M8 quality, runner, detector, and reports.
+- [x] M5 pinned quality command, paired sample statistics, and fake-server token agreement.
+- [ ] M6–M8 runner, detector, and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
 No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
@@ -303,3 +304,18 @@ pooled-ITL/TPOT/throughput/goodput, greater-than-1% mismatch detection, exact
 failure thresholds, truncation/zero-output accounting, measured-capacity rates,
 and built-command execution against the fake benchmark in both load modes.
 Real GPU and vLLM paths: not run (needs GPU).
+
+## M5 quality evaluation
+
+Quality command building, provisional gsm8k sample parsing, paired Wilson/McNemar
+statistics, and greedy integer-token agreement are implemented offline. The live
+extra pins lm-eval 0.4.9.2; raw completions use fixed five-shot prompts, greedy
+decoding, seed and a 512-token cap. Both extraction filters and sample hashes
+are retained. Agreement uses 200 fixed synthetic arithmetic prompts and compares
+returned token IDs, not an inferred tokenization of decoded strings.
+
+M5 verification: full suite passed before the final two rejection cases; final
+passing counts are recorded in the milestone PR. Real quality scores and harness
+execution: not run (needs GPU). No capability or quantization-quality result exists.
+
+M5 final verification: `pytest` passed 243 cases; `ruff check .` passed.
