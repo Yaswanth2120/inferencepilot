@@ -386,3 +386,135 @@ prefill. Add synthetic KV/backend/graph lines without claiming they are real
 GPU output. Integration fixtures put fake nvidia-smi and a preflight ps shim on
 PATH; group-exit inspection delegates to the real OS ps so actual child cleanup
 is still verified. No GPU/vLLM path was run: not run (needs GPU).
+
+## M4 — pinned source investigation and scope
+
+The owner authorized M3's merge; all six required jobs were green. Squash
+merge PR #3 and advance the reserved M4 branch from the updated main. Implement
+only the benchmark command/parser and metrics layer. Actual invocation,
+checkpointing, raw-path ownership, analysis CLI/store integration, and budget
+scheduling remain M6 rather than building a second runner in this milestone.
+
+Inspect the exact vLLM 0.15.1 sources before defining flags or result semantics:
+[serve.py](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/serve.py),
+[endpoint_request_func.py](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/lib/endpoint_request_func.py),
+and [datasets.py](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/datasets.py).
+These are references, not local imports. Real GPU/vLLM paths: not run (needs GPU).
+M0's fake E2E array was explicitly provisional; refresh that fake artifact to the
+actual consumed schema as part of M4 rather than teaching production code to
+trust a field the pinned tool does not export.
+
+## M4 — command contract and load modes
+
+Add separate LoadSpec and SLOSpec data models without changing M1's serialized
+closed-loop plan schema. LoadSpec requires exactly a positive concurrency for
+closed mode or a positive finite arrival rate for open mode. Strict new numeric
+fields reject booleans/strings. A complete SLO triple is nonnegative milliseconds.
+
+Build argv only from centralized BENCH_FLAGS. Always select openai raw streaming
+completions, the exact model/host/port, stored rep seed, fixed input/output length,
+ignore_eos, temperature zero, warmup count, saved details, and percentile metrics
+TTFT/TPOT/ITL/E2E with p50/95/99. Random-range-ratio zero fixes requested lengths.
+For the prefix dataset use one shared prefix, not the tool default ten, so
+2048+256 input and 128 output express the specified shared-prefix workload.
+The source spelling is prefix_repetition, not the prose hyphenation.
+
+Closed mode passes request-rate inf plus max-concurrency; open mode passes a
+finite rate with burstiness 1 and omits max-concurrency to avoid turning a
+Poisson arrival-rate test into a concurrency-capped measurement. A provided
+SLO emits all three tool goodput pairs with ms units. Register every benchmark
+flag in USED_FLAGS so doctor checks the complete serve and bench help outputs.
+The builder performs no I/O; M6 must provide unique raw paths and skip completed
+reps on resume. No path-creation/overwrite protection is falsely claimed here.
+
+## M4 — raw result validation and E2E limitation
+
+Validate the consumed generation fields strictly: one openai backend, a positive
+benchmark duration/prompt count, finite nonnegative timings/counts, aligned
+input/output/TTFT/gap/error arrays, and consistent completed/failed counts.
+An empty per-request error means transport success; its fixed-length output
+validity is a separate metric decision. This permits an HTTP-successful but
+zero-token response to be counted as truncated rather than silently dropped.
+If tool outcomes cannot be reconciled with error records, reject the artifact
+as adapter-broken instead of guessing which requests succeeded. Failed-request
+output_lens must be zero, as in the pinned serializer. Metadata not used by
+metrics is ignored, including any extraneous legacy e2els array.
+
+The pinned result has no per-request E2E array. For the openai completion
+backend, reconstruct E2E=TTFT+sum(stream_gaps), using the source's successive
+stream timestamps. The first timestamp and TTFT are read separately, so the
+reconstruction may have a small positive clock-reading skew. It is not an
+independent exact latency observation. Require reconstructed p99 to agree
+within 1% with the tool's E2E p99 and retain a provisional-source note. A real
+fixture may expose a limitation; fail visibly rather than assuming the skew is
+small enough. Only this backend is supported: openai-chat may also time usage
+chunks differently and is rejected rather than silently reusing this formula.
+
+Do not require gap count=output_tokens-1: the pinned code explicitly notes token
+bundling and may also record empty finish chunks. Pooled ITL describes observed
+stream gaps; TPOT=sum(gaps)/(actual_output_tokens-1) is the per-request mean
+output-token decode time. For zero/one-token outputs there is no TPOT distribution
+sample. Goodput alone treats it as zero, matching the tool's documented code path.
+
+## M4 — metric populations, n, and failure thresholds
+
+First cross-check all transport successes, including fixed-length violations,
+against tool mean TTFT, p99 E2E, request throughput, and output throughput.
+Relative difference uses the independently recomputed value as denominator;
+exactly 1% is allowed and greater than 1% raises AdapterBrokenError. A recomputed
+zero requires a reported zero. Integer token totals must agree exactly, not
+within a relative tolerance. Parser/schema failures use the same explicit
+adapter-broken error class. Future orchestration must not treat adapter corruption
+as a server regression or silently proceed with those metrics.
+
+Own latency distributions and SLO goodput exclude transport failures, truncated
+outputs (<requested length), and overlong outputs (>requested length). Report
+the latter two separately so a short response cannot appear as improved latency.
+Physical output/request throughput remains total delivered output tokens and
+transport-completed requests divided by measured duration, including short
+responses, matching the tool definition. It is explicitly distinct from full-length
+SLO goodput. This avoids an unavoidable false cross-check mismatch if valid-only
+latency populations were used to recreate tool numbers that include truncations.
+
+Effective failures are transport failures plus output-length violations. More
+than 1% makes a rep partial and ineligible; exactly 1% remains ok with notes.
+Use integer failed*100>attempted to avoid threshold rounding. If no valid full
+requests remain, label failed. Distributions carry observation counts and ms
+units; empty distributions have n=0 and None values, never made-up zero latencies.
+Pooled ITL n is gap count, TPOT/TTFT/E2E n is valid request count. Rate n is total
+measured attempts, with numerator count, duration, units, and separate outcome
+counts also retained. No invalid requests are silently discarded from reporting.
+
+## M4 — measured capacity and open-loop rates
+
+The caller supplies only baseline/chat/closed-loop measurements grouped by
+configured concurrency. Exclude partial/failed reps, average comparable rep
+request-throughput within each point, then take the maximum tested point mean.
+This uses the stated rep unit and does not select a lucky single rep. On equal
+means select the smaller concurrency. Keep the selected point's rep count and
+the total number of excluded reps across the input points. The helper cannot
+infer baseline/workload provenance from a bare numeric rate; future M6/store
+selection is responsible for supplying the correct context.
+
+Require a positive finite CapacityEstimate with at least one comparable rep to
+derive open-loop LoadSpecs at 50%, 80%, and 95%. Do not guess request throughput
+from max_num_seqs or configured concurrency. These helpers resolve rates after
+measurement; M1's initial plan continues to show open-loop runtime as deferred
+until the later runner integrates calibration and these measured rates.
+
+## M4 — synthetic benchmark fixture behavior
+
+The fake accepts the full new benchmark argv and emits pinned-shape detailed
+arrays, counts, backend, and required tool summaries without importing library
+metrics or running a load generator. It simulates closed lanes or spaced open
+start times deterministically, not actual Poisson/HTTP load or GPU behavior.
+Warmups are accepted but not emitted among measured arrays. Fake-only controls
+inject process failure, request failures, short output, and latency scaling.
+These are synthetic contracts, not serving performance evidence. Its percentile
+calculation is independent of stats.py so a shared implementation cannot make
+an adapter bug self-confirming. Hand-worked fixtures provide the primary check.
+
+Reject a nonfinite recomputed cross-check value explicitly: a finite tiny raw
+duration can otherwise overflow throughput, and inf > inf is false when comparing
+an infinite difference against an infinite tolerance. This must never publish an
+infinite rate as a validated metric.

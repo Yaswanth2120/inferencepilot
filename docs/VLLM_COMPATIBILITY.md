@@ -31,11 +31,31 @@ Doctor checks the selected binary's version and every serve flag currently
 used by ConfigSpec. It requests the full help because the pinned parser's
 [implementation](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/utils/argparse_utils.py)
 provides grouped help by default. A missing flag fails the environment check;
-it does not proceed to start a server. M4 must add its benchmark flags to
-USED_FLAGS when it introduces the production benchmark command builder.
+it does not proceed to start a server. M4 registers all benchmark flags in USED_FLAGS alongside serve flags; doctor
+now checks both complete help outputs.
 The fake version string labels itself fake and does not establish real compatibility.
 
 Config validation follows the pinned [scheduler implementation](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/config/scheduler.py):
 token budget must cover the sequence ceiling and, with chunked prefill off,
 the maximum model length. Presence of an option does not prove hardware support
 or that the engine honors it; M3/M9 probes and resolved logs remain required.
+
+
+## M4 detailed-result contract
+
+The implementation was inspected directly at the pinned tag:
+[serve metrics and serialization](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/serve.py),
+[completion timing](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/lib/endpoint_request_func.py),
+and [dataset arguments](https://github.com/vllm-project/vllm/blob/v0.15.1/vllm/benchmarks/datasets.py).
+The source exports per-request input/output lengths, TTFT, streaming gaps, and
+errors, but not individual E2E values. E2E is reconstructed and checked against
+the reported p99; the separate first-token clock readings can introduce skew.
+Only openai raw completions are supported; chat timing has different semantics.
+
+A stream gap is not assumed to equal one output token. The exported output
+count comes from usage or tokenization; TPOT divides total decode time by
+output_tokens-1. Required numeric fields and arrays are validated strictly;
+unused metadata is ignored rather than treated as another timing authority.
+The command explicitly enables E2E summaries because the generative default
+percentile list omits E2E. Warmups are unmeasured and do not appear in arrays.
+All implementation/fixture compatibility remains provisional until M9 real output.

@@ -37,3 +37,21 @@ status remains provisional. The probe module compares requested vs observed
 factor values and stores failure evidence independently of the future runner.
 No production module imports fakes. GPU telemetry around benchmark reps is
 still a future runner responsibility; no rep execution is added in M3.
+
+
+M4 adds a pure command builder/parser and a metrics layer that does no process
+or filesystem I/O. LoadSpec separates concurrency-capped capacity measurements
+from uncapped arrival-rate measurements. The existing M1 closed-loop plan schema
+is unchanged; M6 can use the measured-capacity helper to create its later open stage.
+
+Parser validation checks the fields used by metrics, while the original JSON
+artifact remains the future store's raw evidence. Cross-checks use all tool
+transport-successful requests, including truncated completions; fixed-length
+latency and goodput views use only valid full-length requests. These two views
+are deliberately not mixed. Existing statistics functions compute every mean
+and percentile, and empty distributions retain n=0 with missing values.
+
+The fake benchmark still produces deterministic synthetic artifacts without
+sending load. Its additional flags, failures, truncation, and arrival/concurrency
+metadata exercise the adapter contract, not real serving capacity or open-loop
+latency behavior. No campaign runner or DB persistence is implemented in M4.

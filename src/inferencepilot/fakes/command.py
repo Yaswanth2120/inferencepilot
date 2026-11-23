@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import os
 import signal
 import subprocess
@@ -29,46 +30,96 @@ def add_flags(parser, flags):
         "eager",
         "save_result",
         "save_detailed",
+        "ignore_eos",
     }
     for name, flag in flags.items():
         if flag == os.environ.get("INFERENCEPILOT_FAKE_OMIT_FLAG"):
             continue
-        parser.add_argument(flag, dest=name, action="store_true" if name in switches else "store")
+        if name == "goodput":
+            parser.add_argument(flag, dest=name, nargs="+")
+        else:
+            parser.add_argument(
+                flag, dest=name, action="store_true" if name in switches else "store"
+            )
+
+
+def fake_percentile(values, percent):
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * percent / 100
+    low = int(position)
+    return ordered[low] + (ordered[min(low + 1, len(ordered) - 1)] - ordered[low]) * (
+        position - low
+    )
 
 
 def bench(args):
+    if os.environ.get("INFERENCEPILOT_FAKE_BENCH_CRASH") == "1":
+        print("injected benchmark failure", file=sys.stderr)
+        return 1
     count = int(args.num_prompts or 3)
-    output_len = int(args.output_len or 4)
-    input_len = int(args.input_len or 8)
-    if min(count, output_len, input_len) < 1:
-        raise ValueError("fake benchmark lengths and prompt count must be positive")
-    schedules = [
-        delays(Settings(), input_len, output_len, 1, int(args.seed or 0) + i) for i in range(count)
-    ]
-    ttfts = [s[0] + s[1] for s in schedules]
-    itls = [s[2:] for s in schedules]
-    latencies = [sum(s) for s in schedules]
-    duration = sum(latencies)
-    ordered = sorted(latencies)
-    position = (count - 1) * 0.99
-    low = int(position)
-    p99 = ordered[low] + (ordered[min(low + 1, count - 1)] - ordered[low]) * (position - low)
+    prefix = args.dataset == "prefix_repetition"
+    output_len = int((args.prefix_output_len if prefix else args.output_len) or 4)
+    input_len = (
+        (int(args.prefix_len or 0) + int(args.suffix_len or 8))
+        if prefix
+        else int(args.input_len or 8)
+    )
+    concurrency = int(args.concurrency or 1)
+    if min(count, output_len, input_len, concurrency) < 1:
+        raise ValueError("fake benchmark counts and lengths must be positive")
+    settings = Settings(
+        inject_slowdown_pct=float(os.environ.get("INFERENCEPILOT_FAKE_INJECT_SLOWDOWN_PCT", "0"))
+    )
+    fail_every = int(os.environ.get("INFERENCEPILOT_FAKE_BENCH_FAIL_EVERY", "0"))
+    truncate_every = int(os.environ.get("INFERENCEPILOT_FAKE_BENCH_TRUNCATE_EVERY", "0"))
+    outputs, ttfts, itls, errors, elapsed = [], [], [], [], []
+    for index in range(count):
+        failed = fail_every > 0 and (index + 1) % fail_every == 0
+        tokens = output_len - int(truncate_every > 0 and (index + 1) % truncate_every == 0)
+        schedule = delays(
+            settings, input_len, max(1, tokens), concurrency, int(args.seed or 0) + index
+        )
+        elapsed.append(sum(schedule))
+        outputs.append(0 if failed else tokens)
+        ttfts.append(0 if failed else schedule[0] + schedule[1])
+        itls.append([] if failed else schedule[2:])
+        errors.append("injected request failure" if failed else "")
+    rate = float(args.request_rate or "inf")
+    starts = []
+    available = [0.0] * min(concurrency, count)
+    for index, latency in enumerate(elapsed):
+        lane = index % len(available)
+        start = index / rate if math.isfinite(rate) else available[lane]
+        starts.append(start)
+        available[lane] = start + latency
+    duration = max(start + latency for start, latency in zip(starts, elapsed))
+    successful = [i for i in range(count) if not errors[i]]
+    latencies = [ttfts[i] + sum(itls[i]) for i in successful]
+    completed_ttfts = [ttfts[i] for i in successful]
     result = {
         "fixture_status": "provisional",
+        "backend": args.backend or "openai",
+        "num_prompts": count,
         "duration": duration,
-        "completed": count,
-        "total_input_tokens": count * input_len,
-        "total_output_tokens": count * output_len,
-        "request_throughput": count / duration,
-        "output_throughput": count * output_len / duration,
-        "mean_ttft_ms": sum(ttfts) / count * 1000,
-        "p99_e2el_ms": p99 * 1000,
+        "completed": len(successful),
+        "failed": count - len(successful),
+        "total_input_tokens": len(successful) * input_len,
+        "total_output_tokens": sum(outputs),
+        "request_throughput": len(successful) / duration,
+        "output_throughput": sum(outputs) / duration,
+        "mean_ttft_ms": sum(completed_ttfts) / len(successful) * 1000 if successful else 0,
+        "p99_e2el_ms": fake_percentile(latencies, 99) * 1000,
         "input_lens": [input_len] * count,
-        "output_lens": [output_len] * count,
+        "output_lens": outputs,
         "ttfts": ttfts,
         "itls": itls,
-        "e2els": latencies,
-        "errors": [""] * count,
+        "errors": errors,
+        "start_times": starts,
+        "generated_texts": [
+            "synthetic completion" if i in successful else "" for i in range(count)
+        ],
     }
     if args.save_result:
         directory = Path(args.result_dir or ".")

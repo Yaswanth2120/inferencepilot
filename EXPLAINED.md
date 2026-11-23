@@ -686,3 +686,181 @@ It checks the interrupt propagates while the launch records aborted and complete
 `test_interrupted_start_cleans_owned_process.interrupt_after_ready` waits for the real
 fake-server readiness path before raising. This ensures the interruption test owns an actual
 server/child tree rather than only simulating ownership metadata.
+
+# M4 adapter, metric models, and fake changes
+
+`LoadSpec.valid_load` requires exactly a concurrency cap for closed mode or an
+arrival rate for open mode. Keeping these modes exclusive prevents a capped
+capacity measurement from being mislabeled as open-loop latency.
+
+`DetailedResult.aligned_requests` checks consumed arrays against the declared
+prompt count and tool outcome counters. It rejects contradictory raw records
+rather than guessing which samples succeeded or silently dropping missing data.
+
+`RequestResult.success` defines transport success from the absence of a recorded
+error. Output-length validity is checked later so a successful zero/short output
+can still be reported as truncated.
+
+`loadgen.build_command` maps validated server/workload/load/SLO data to an argument
+list through the central flag vocabulary. It sets fixed generation and detailed
+metrics explicitly and performs no process or filesystem I/O.
+
+`loadgen.parse_result` validates the pinned JSON fields used by the adapter and
+preserves their raw request values. It wraps schema failures in AdapterBrokenError
+so future orchestration cannot confuse parsing corruption with a server regression.
+
+`RepMetrics.can_compare` exposes the documented ok-versus-partial/failed gate.
+Downstream capacity and regression code can use this gate without reimplementing
+the failure-percentage threshold.
+
+`metrics.e2e_seconds` reconstructs end-to-end time from TTFT plus observed gaps.
+The pinned serializer lacks raw E2E, so this derived value is provisional and its
+p99 is checked against the tool rather than treated as an independent observation.
+
+`metrics.tpot_seconds` divides total observed decode time by output_tokens-1.
+It does not divide by stream-gap count because chunks may bundle tokens, and it
+returns None when no token-to-token denominator exists.
+
+`metrics.distribution` converts seconds to milliseconds and uses stats.py for
+means and percentiles. It includes observation count and leaves empty statistics
+missing rather than presenting a zero latency without samples.
+
+`metrics.cross_check` recomputes tool summaries from all transport successes and
+checks the relative tolerance and exact token totals. Using the tool's population
+here prevents expected truncation exclusions from looking like parser corruption.
+
+`metrics.summarize` classifies output validity, derives full-length latency views,
+and computes physical throughput and SLO goodput. It retains failure counts and
+notes so excluded requests and reps remain visible to reports and comparisons.
+
+`metrics.baseline_chat_capacity` averages comparable rep throughput within each
+supplied baseline chat concurrency and chooses the largest point mean. It stores
+the selected point/count and exclusions instead of choosing a single lucky rep.
+
+`metrics.open_loop_loads` creates three finite-rate LoadSpecs from measured capacity.
+It rejects absent/nonpositive capacity and omits any concurrency cap, leaving the
+actual arrival process to the wrapped tool.
+
+`command.add_flags` now recognizes benchmark switches and multi-value goodput pairs.
+This allows the fake's real argparse/help interface to exercise the new command
+builder and doctor checks without importing vLLM.
+
+`command.fake_percentile` computes synthetic tool-summary percentiles independently
+of the library's statistics implementation. Its simple interpolation avoids a
+shared bug making an adapter cross-check pass itself.
+
+`command.bench` now accepts workload/load flags and emits the consumed pinned result
+schema with counts, timing arrays, and synthetic scheduling metadata. It supports
+controlled failures and short outputs but never sends load or claims GPU capacity.
+
+# M4 unit tests
+
+`test_loadgen.worked_raw` loads a fresh independent three-request fixture.
+Tests can corrupt fields without changing another test's reference artifact.
+
+`test_exact_workload_point_commands` checks all eight configured closed-loop points
+and three open-loop rates against complete argument snapshots. It verifies that
+open-loop commands contain no hidden client concurrency cap.
+
+`test_slo_arguments_and_custom_binary` checks the executable override and exact
+three-part goodput arguments. This verifies both units and multi-value ordering
+at the subprocess boundary.
+
+`test_invalid_load` rejects missing, contradictory, nonpositive, nonfinite, and
+coerced boolean/string load settings. These inputs cannot identify an unambiguous
+closed- or open-loop experiment point.
+
+`test_invalid_command_inputs` rejects invalid seeds, file names, unconfigured
+closed points, and context overflow. The builder must reject them before a future
+runner can execute an inconsistent command.
+
+`test_parse_schema_and_bundled_stream_gaps` checks raw values and unequal stream-gap
+counts without equating them to output tokens. It also verifies parsing leaves
+the original artifact unchanged.
+
+`test_invalid_result_is_adapter_broken` corrupts arrays, counts, required summaries,
+timings, and backend identity. It requires an explicit adapter error rather than
+coercion or a partially invented successful result.
+
+`test_invalid_slo_thresholds` rejects nonnumeric, boolean, negative, and nonfinite
+thresholds. These cannot be silently converted into meaningful millisecond SLOs.
+
+`test_metrics.raw` loads the same hand-worked result independently for metric tests.
+Its tool numbers are fixture constants rather than outputs generated by stats.py.
+
+`test_metrics.simple_raw` constructs equal-timing request populations with controlled
+transport, short, and long outcomes. The uniform 100ms TTFT/200ms E2E makes their
+summary expectations arithmetic rather than another implementation of percentiles.
+
+`test_hand_computed_distributions_rates_and_goodput` checks the full worked TTFT,
+E2E, pooled ITL, per-request TPOT, throughput, and SLO calculation. Its comments
+show why bundled chunks produce different pooled and per-request views.
+
+`test_reconstruction_does_not_trust_nonexistent_pinned_e2e_array` supplies a bogus
+legacy E2E field alongside correct pinned arrays. It proves this unexported field
+cannot silently become another timing authority.
+
+`test_crosscheck_more_than_one_percent_is_broken` perturbs each required tool summary
+beyond the tolerance. It requires the failure to identify the mismatched metric.
+
+`test_crosscheck_exact_one_percent_boundary` checks both directions at exactly 1%.
+The stated greater-than rule must not become greater-than-or-equal through rounding.
+
+`test_crosscheck_token_totals_are_exact` changes integer input/output totals by one.
+Token accounting is an exact schema invariant rather than a relative-latency tolerance.
+
+`test_failure_and_truncation_classification` tests exact 1%, partial, no-valid-output,
+and overlong boundaries. It also checks the distributions' n and comparison notes
+reflect the actual excluded population.
+
+`test_truncated_outputs_do_not_meet_goodput_but_physical_tokens_count` checks a single
+short output among 100 requests. Its worked totals separate delivered physical
+throughput from valid full-length goodput without disguising either definition.
+
+`test_one_token_and_empty_distributions_are_not_invented_zeros` checks single-token
+TPOT and an all-failed rep. It requires empty statistics to remain missing while
+applying the tool's zero-TPOT convention only to single-token goodput.
+
+`test_zero_summary_must_match_zero_recomputed_rate` supplies nonzero reported
+throughput when no output tokens exist. It verifies the relative-comparison rule
+has a meaningful strict behavior at a zero denominator.
+
+`test_measured_capacity_and_open_loop_rates` derives capacity from worked repeated
+point measurements and excludes a partial rep. It checks the exact 50/80/95%
+rates and verifies no concurrency limit appears in those LoadSpecs.
+
+`test_measured_capacity_and_open_loop_rates.measured` produces a validated fixed-count
+rep for a chosen worked throughput by setting its duration. It lets the parent test
+control rate arithmetic without constructing an unverified RepMetrics by hand.
+
+`test_invalid_capacity_or_metric_inputs` rejects absent/invalid capacity data and
+invalid expected output lengths. A future runner cannot substitute a guessed zero
+capacity or silently analyze a nonsensical generation target.
+
+`test_zero_output_transport_success_counts_as_truncated` represents a successful
+stream that produces no output tokens. It checks transport accounting stays correct
+while the fixed-length result is rejected and counted visibly as truncated.
+
+# M4 executable integration tests
+
+`test_loadgen_pipeline.fake_path` selects the active virtualenv interpreter for the
+fake executable. It avoids accidental dependence on a system Python or real vLLM.
+
+`test_builder_fake_executable_parser_metrics` executes built commands for both dataset
+families and load modes, parses saved JSON, and cross-checks derived metrics. It also
+checks warmups stay outside measured arrays and repeated seeded output is deterministic.
+
+`test_fake_failed_and_truncated_reps` drives independent request-failure and short-output
+controls through the executable. It checks these artifacts become partial reps with
+the correct separate failure counts.
+
+`test_fake_benchmark_process_failure` injects a nonzero benchmark exit.
+It verifies the failure diagnostic and absence of a misleading successful result file.
+
+`test_doctor_checks_benchmark_options_too` hides a required benchmark-only option from
+actual fake help output. It proves doctor's registration covers the new adapter
+instead of only continuing to validate serve flags.
+
+`test_overflowed_derived_rate_is_not_accepted_as_within_tolerance` supplies a finite
+but impossibly small duration that overflows the derived throughput. It checks
+that an infinite tolerance cannot make an invalid rate appear to cross-check successfully.

@@ -1,0 +1,22 @@
+{
+  "fixture_status": "provisional",
+  "source": "Constructed from the vLLM 0.15.1 schema; not a GPU recording",
+  "backend": "openai",
+  "num_prompts": 3,
+  "duration": 2.0,
+  "completed": 3,
+  "failed": 0,
+  "total_input_tokens": 12,
+  "total_output_tokens": 9,
+  "request_throughput": 1.5,
+  "output_throughput": 4.5,
+  "mean_ttft_ms": 200.0,
+  "p99_e2el_ms": 500.0,
+  "input_lens": [4, 4, 4],
+  "output_lens": [3, 3, 3],
+  "ttfts": [0.1, 0.2, 0.3],
+  "itls": [[0.05, 0.15], [0.3], [0.2]],
+  "start_times": [0.0, 0.0, 0.0],
+  "generated_texts": ["constructed", "constructed", "constructed"],
+  "errors": ["", "", ""]
+}
