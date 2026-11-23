@@ -32,6 +32,8 @@ class Completion(BaseModel):
     max_tokens: int = Field(default=4, ge=1, le=8192)
     stream: bool = False
     seed: int = 0
+    logprobs: int | None = None
+    return_tokens_as_token_ids: bool = False
 
 
 def delays(settings, prompt_tokens, output_tokens, active, seed):
@@ -112,6 +114,13 @@ def create_app(settings=None):
         choice["message" if chat else "text"] = (
             {"role": "assistant", "content": "".join(output)} if chat else "".join(output)
         )
+        if body.logprobs is not None and not chat:
+            choice["logprobs"] = {
+                "tokens": [
+                    f"token_id:{i}" if body.return_tokens_as_token_ids else f" token{i}"
+                    for i in range(len(output))
+                ]
+            }
         return {
             "id": "fake-completion",
             "object": "chat.completion" if chat else "text_completion",

@@ -1,0 +1,8 @@
+{"doc_id": 0, "doc_hash": "doc-0", "prompt_hash": "prompt-0", "filter": "strict-match", "exact_match": 1}
+{"doc_id": 0, "doc_hash": "doc-0", "prompt_hash": "prompt-0", "filter": "flexible-extract", "exact_match": 1}
+{"doc_id": 1, "doc_hash": "doc-1", "prompt_hash": "prompt-1", "filter": "strict-match", "exact_match": 1}
+{"doc_id": 1, "doc_hash": "doc-1", "prompt_hash": "prompt-1", "filter": "flexible-extract", "exact_match": 1}
+{"doc_id": 2, "doc_hash": "doc-2", "prompt_hash": "prompt-2", "filter": "strict-match", "exact_match": 0}
+{"doc_id": 2, "doc_hash": "doc-2", "prompt_hash": "prompt-2", "filter": "flexible-extract", "exact_match": 0}
+{"doc_id": 3, "doc_hash": "doc-3", "prompt_hash": "prompt-3", "filter": "strict-match", "exact_match": 1}
+{"doc_id": 3, "doc_hash": "doc-3", "prompt_hash": "prompt-3", "filter": "flexible-extract", "exact_match": 1}

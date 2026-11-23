@@ -864,3 +864,55 @@ instead of only continuing to validate serve flags.
 `test_overflowed_derived_rate_is_not_accepted_as_within_tolerance` supplies a finite
 but impossibly small duration that overflows the derived throughput. It checks
 that an infinite tolerance cannot make an invalid rate appear to cross-check successfully.
+
+# M5 functions
+
+`quality.quality_command` builds a pinned raw-completion gsm8k command with fixed
+few-shot/seed settings. It validates subset size and model-argument delimiters
+before any external command can run.
+
+`quality.parse_samples` validates identities and binary correctness in logged
+samples. Both filters must cover the same documents so pairing cannot silently
+compare different evaluation subsets.
+
+`quality.read_samples` reads JSONL and delegates all sample validation.
+This keeps file access separate from the statistical comparison itself.
+
+`quality.quality_summary` calculates per-filter accuracy and Wilson intervals.
+It includes n and correct counts to make every reported proportion auditable.
+
+`quality.paired_quality` aligns baseline and candidate documents by identity and
+hash. Exact McNemar uses only discordant pairs, preserving the paired design.
+
+`quality.fixed_prompts` returns the same 200 synthetic arithmetic prompts.
+They test output stability and do not represent a broad quality benchmark.
+
+`quality.agreement` compares token sequences and locates the first differing
+position. Exact matches are excluded from the divergence average rather than
+inventing a divergence at position zero.
+
+`quality.greedy_outputs` requests integer token IDs from raw greedy completions.
+It rejects decoded strings or incomplete usage so agreement cannot claim token
+identity from ambiguous text.
+
+`quality.agreement_check` manages an HTTP client for the running server and
+optionally compares against saved reference outputs. It does not start a server.
+
+`test_quality_command_snapshot` checks exact CLI arguments and subset defaults.
+It verifies the command contract without installing the GPU-only harness extra.
+
+`test_sample_parser_and_paired_worked_values` checks a 3/4 accuracy Wilson example
+and b=3,c=0 McNemar p=.25. Hash and sample-set mismatches must fail pairing.
+
+`test_agreement_worked_sequences` checks exact matches, internal divergence and
+strict-prefix divergence. Its expected mean position is calculated by hand.
+
+`test_reject_duplicate_and_incomplete_filters` checks sample identity integrity.
+Malformed populations cannot turn into apparently paired quality evidence.
+
+`test_fake_server_greedy_token_agreement` exercises actual fake HTTP handlers and
+compares returned token IDs. The nested check coroutine avoids an async test-plugin dependency.
+
+`test_agreement_rejects_decoded_text_instead_of_ids` supplies an invalid response
+through MockTransport. Its nested handler and check coroutine ensure ambiguous
+decoded text cannot be accepted as token IDs.
