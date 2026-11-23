@@ -4,6 +4,7 @@ import ast
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import re
@@ -120,7 +121,7 @@ def check_flags(binary):
     return []
 
 
-def doctor(vllm_bin):
+def vllm_errors(vllm_bin):
     checks = []
     binary = shutil.which(vllm_bin)
     if binary is None:
@@ -132,6 +133,11 @@ def doctor(vllm_bin):
         elif PINNED_VLLM_VERSION not in version["output"].split():
             checks.append(f"expected vllm {PINNED_VLLM_VERSION}; got {version['output']}")
         checks.extend(check_flags(binary))
+    return checks
+
+
+def doctor(vllm_bin):
+    checks = vllm_errors(vllm_bin)
     environment = snapshot()
     if not environment["gpu"]["available"]:
         checks.append("nvidia-smi unavailable or failed")
@@ -153,3 +159,66 @@ def doctor(vllm_bin):
 def selftest_stub():
     print("M0 CLI wiring OK. Full fake-server pipeline selftest is pending M6.")
     return 0
+
+
+def gpu_memory_used():
+    result = command_output(
+        [
+            "nvidia-smi",
+            "--query-gpu=memory.used",
+            "--format=csv,noheader,nounits",
+        ]
+    )
+    if not result["available"]:
+        raise RuntimeError(f"cannot verify GPU memory: {result['error']}")
+    rows = result["output"].splitlines()
+    if len(rows) != 1:
+        raise RuntimeError("exactly one visible GPU is required")
+    try:
+        memory = float(rows[0])
+    except ValueError as error:
+        raise RuntimeError("invalid nvidia-smi memory.used output") from error
+    if not math.isfinite(memory) or memory < 0:
+        raise RuntimeError("invalid nvidia-smi memory.used output")
+    return memory
+
+
+def vllm_processes():
+    result = command_output(["ps", "-eo", "pid=,comm=,args="])
+    if not result["available"]:
+        raise RuntimeError(f"cannot inspect serving processes: {result['error']}")
+    found = []
+    for line in result["output"].splitlines():
+        parts = line.strip().split(maxsplit=2)
+        if not line.strip():
+            continue
+        if len(parts) != 3 or not parts[0].isdigit():
+            raise RuntimeError("cannot parse serving-process inspection output")
+        pid, executable, arguments = parts
+        tokens = arguments.split()
+        name = Path(executable).name
+        is_vllm = name == "vllm" or name.startswith("VLLM::")
+        if tokens:
+            is_vllm |= Path(tokens[0]).name == "vllm" or tokens[0].startswith("VLLM::")
+        if name.lower().startswith("python") and len(tokens) > 1:
+            is_vllm |= Path(tokens[1]).name == "vllm"
+            if len(tokens) > 2 and tokens[1] == "-m":
+                is_vllm |= tokens[2] == "vllm" or tokens[2].startswith("vllm.")
+        if is_vllm and int(pid) != os.getpid():
+            found.append({"pid": int(pid), "executable": name})
+    return found
+
+
+def process_group_active(group):
+    result = command_output(["ps", "-eo", "pgid=,stat="])
+    if not result["available"]:
+        raise RuntimeError(f"cannot verify process-group exit: {result['error']}")
+    for line in result["output"].splitlines():
+        if not line.strip():
+            continue
+        parts = line.split()
+        if len(parts) != 2 or not parts[0].isdigit():
+            raise RuntimeError("cannot parse process-group inspection output")
+        if int(parts[0]) == group and not parts[1].startswith("Z"):
+            return True
+    return False

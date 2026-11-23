@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 class Settings:
     model: str = "fake-model"
     seed: int = 0
+    healthy: bool = True
     token_delay: float = 0.001
     prefill_per_token: float = 0.0001
     concurrency_slowdown: float = 0.1
@@ -66,6 +67,8 @@ def create_app(settings=None):
 
     @app.get("/health")
     async def health():
+        if not settings.healthy:
+            raise HTTPException(503, "injected unhealthy state")
         return {"status": "ok"}
 
     @app.get("/v1/models")

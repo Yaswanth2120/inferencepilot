@@ -282,3 +282,107 @@ CI pull_request trigger to every base branch so a stacked PR gets the same
 six OS/Python checks. Keep the existing tests and protections unchanged.
 The duplicate push/PR workflow behavior predates M2 and is not otherwise
 redesigned here. No earlier milestone implementation is changed in M2.
+
+## M3 — merging the prerequisite PRs
+
+The owner explicitly requested all existing PRs merged before progressing.
+Squash merge M1 with required checks green, rebase only M2's changes onto the
+resulting main using a lease-protected feature-branch push, and retarget M2 to
+main. The installed gh CLI's PR-edit operation failed on a deprecated Projects
+query, so use the supported GitHub REST update instead. A metadata retarget did
+not create the required new-head checks, so add an empty CI refresh commit.
+Enable repository auto-merge and queue M2 only behind its required checks; no
+admin override, status-check removal, or direct main push is used.
+While those jobs queue, M3 work is based on the complete M2 tree; reconcile its
+branch with the squashed main before creating the M3 PR.
+
+## M3 — ownership and failure records
+
+Use one ServerManager per active launch with POSIX start_new_session, assigning
+the owned group only after Popen succeeds. Signals are restricted to that
+recorded group. Port, GPU, process-list, and flag checks are read-only and never
+supply a PID to the signaling path. A second start refuses until the prior
+launch is cleaned up. stop before start is harmless; repeated stop is idempotent.
+No global process-kill command or discovery-based termination is implemented.
+
+LaunchResult is an in-memory dataclass with the schema-compatible status and
+lifecycle fields plus cleanup_complete. Persistence into the exact SQLite
+schema remains M6. Preflight failures are server_failed even in probe mode,
+because a busy port/GPU or missing tool does not establish unsupported hardware.
+After our process starts, load-probe startup failure is labeled
+unsupported_on_hardware, retaining the reason and log tail. That label records
+an unsuccessful load, not an experimentally proven hardware root cause.
+Cleanup failure takes precedence as server_failed, preserves both diagnostics,
+and prevents the next launch. Interruptions record aborted and attempt cleanup.
+
+## M3 — safety checks and units
+
+Interpret the section 12 idle threshold as 2048 MiB, consistent with the units
+reported by nvidia-smi; exactly 2048 is refused. Query memory.used in unformatted
+numeric CSV, require exactly one visible GPU, and reject unknown, negative, or
+nonfinite output. No opt-out bypass is added. The NVIDIA [query reference](https://docs.nvidia.com/deploy/nvidia-smi/)
+and [query examples](https://nvidia.custhelp.com/app/answers/detail/a_id/3751/~/useful-nvidia-smi-queries)
+are the sources for the executable's flags; no NVIDIA executable was run locally.
+
+Read ps executable/module identities rather than any occurrence of the word
+vllm. Detect console scripts, Python module invocations, and VLLM worker names.
+Malformed or unavailable inspection fails closed. Diagnostics retain only PID
+and executable, not full arguments that may contain an API key. Port bind uses
+SO_REUSEADDR so leftover TCP TIME_WAIT does not falsely occupy a reusable port;
+it still rejects another active listener. These checks reduce conflicts but
+cannot atomically reserve the GPU/port against an unrelated concurrent launcher.
+
+## M3 — readiness, logs, and version checks
+
+Preflight reuses doctor's executable-version/full-help checks. The existing
+ConfigSpec argv mapper remains the only builder and all vLLM spellings remain
+in vllm_flags.py. Startup timing begins immediately before Popen. Health and
+models must both return success, models must contain the requested served name,
+and the owned process must still be alive. HTTP calls use a bounded timeout,
+ignore proxy environment variables for localhost, and poll until the configured
+900-second default readiness deadline.
+
+Logs use a validated filename-safe launch ID and exclusive creation; neither
+an existing log nor a probe JSON file is overwritten. Errors retain the last
+200 log lines using a streaming deque. Parsing strips ANSI for matching, keeps
+raw matching lines, accepts engine-field spelling variants, and lets later
+resolved settings override earlier ones. Missing values remain absent. Capture
+context, prefix/chunk states, chunk budget, quantization/KV dtype, KV token
+capacity and maximum concurrency, backend, and graph mode when observed.
+No startup text is eval'd. All parsers/fixtures remain provisional until M9.
+
+## M3 — teardown and process-state race
+
+Signal the owned process group with SIGTERM, allow 60 seconds, then SIGKILL
+and a further bounded 10-second exit wait. Reap the parent, close its log, and
+poll GPU release for up to 120 seconds. A timeout or unknown state records a
+cleanup error and retains the next-start gate; clearing the error condition
+allows an explicit subsequent stop to finish cleanup. The prior launch's
+failure status remains a truthful record even after cleanup succeeds.
+
+During the full macOS test suite, killpg(group,0) intermittently raised EPERM
+around process exit. Replace that existence probe with read-only ps group/state
+inspection, not a blanket permission-error suppression. Zombies cannot execute
+or retain a GPU context, so they do not keep an owned group active; the manager
+still waits/reaps its direct parent. If an actual signal returns EPERM, suppress
+it only after independent read-only inspection confirms no active group member
+remains. Otherwise fail closed. Both cases have tests. Detached descendants in
+a different session/group are outside this group-ownership cleanup mechanism;
+preflight and GPU-release checks remain safeguards, not a claim to kill them.
+
+## M3 — probes and offline evidence
+
+Weight probes validate the selected model/quantization, start with load-probe
+classification, stop, and save JSON evidence. Chunked-prefill runs both boolean
+directions and requires observed values equal to requests for factor_honored.
+Missing/ignored values yield not_honored. FP8 KV probes similarly require the
+resolved cache dtype. A failed cleanup halts the remaining probe configurations
+and remains in JSON. This command does not silently modify an experiment YAML;
+the owner can review its evidence before including optional factors.
+
+Extend only fake controls needed for startup testing: crash diagnostics, a
+never-ready process, health failure, wrong served model, and forced-on chunked
+prefill. Add synthetic KV/backend/graph lines without claiming they are real
+GPU output. Integration fixtures put fake nvidia-smi and a preflight ps shim on
+PATH; group-exit inspection delegates to the real OS ps so actual child cleanup
+is still verified. No GPU/vLLM path was run: not run (needs GPU).

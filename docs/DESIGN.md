@@ -22,3 +22,18 @@ is reproducible for identical input and seed. Dry-run reconstructs the plan
 from its embedded experiment and rejects edited or stale derived fields.
 See DECISIONS.md for the baseline-order ambiguity and cost formula, and
 VLLM_COMPATIBILITY.md for versioned sources and overlap with existing tools.
+
+
+M3 adds ServerManager and persistent probe output. The manager returns a
+LaunchResult; M6 will map it into SQLite rather than introducing SQL early.
+It owns only a Popen-created group, retains that ownership through failed
+cleanup, and clears it only after read-only inspection finds no active group
+members. The parent is reaped before closing logs and checking memory release.
+An unknown process state or memory result fails closed.
+
+Pure startup parsing lives with server lifecycle. Last matching resolved values
+win and matched raw lines remain attached. Missing keys stay missing; parser
+status remains provisional. The probe module compares requested vs observed
+factor values and stores failure evidence independently of the future runner.
+No production module imports fakes. GPU telemetry around benchmark reps is
+still a future runner responsibility; no rep execution is added in M3.
