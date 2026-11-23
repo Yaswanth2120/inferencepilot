@@ -1049,3 +1049,29 @@ decoded text cannot be accepted as token IDs.
 The campaign wrapper defaults to a dry run and checks measured calibration and probe evidence before invoking the real CLI. The sync wrapper makes an integrity-checked SQLite backup first, then copies raw artifacts without deleting destination data, so active WAL writes are not lost.
 
 `Runner.collect_agreement` wraps the HTTP agreement coroutine in the remaining experiment deadline and preserves the config seed. Cancellation closes the client before server teardown, so a slow quality pass cannot keep starting requests after the campaign budget is exhausted.
+
+### Detached campaign automation
+
+`scripts/detached_campaign.py:save_state` atomically replaces the progress JSON file. A reader after SSH reconnection therefore gets a complete checkpoint rather than a partial write.
+
+`experiment_id` reads the latest committed experiment through a read-only connection. It tolerates the short period before the runner creates its database and never creates an empty database while polling.
+
+`start` validates measured calibration, completed probes, runtime and destination paths before spawning a detached worker. Fresh state directories preserve previous logs, and inherited locking keeps the job record owned for the worker lifetime.
+
+`Supervisor.__init__` restores job arguments and establishes a single supervision deadline. It keeps process ownership, checkpoint metadata and backup timing in one place.
+
+`Supervisor.interrupt` records a stop request from SIGTERM or SIGINT. The polling loop then enters the same cleanup path used for deadline exhaustion.
+
+`Supervisor.checkpoint` fills in the experiment identity when available and persists progress. Saved state makes later reconnection independent of the original assistant context.
+
+`Supervisor.stop_child` signals only the process group the supervisor created. It permits the runner's owned-server cleanup before escalating, and records a warning if forced termination was needed.
+
+`Supervisor.backup` invokes the existing consistent SQLite backup plus artifact transfer. It records failures without turning missing backup evidence into a successful backup claim.
+
+`Supervisor.stage` runs one CLI stage with deadline monitoring and checkpoint updates. Allowed exit codes distinguish a regression finding from a command failure.
+
+`Supervisor.run` sequences the campaign, analyses and report and always saves terminal status. It attempts a final configured backup so completed results can be collected later.
+
+`main` wires start, status and the private worker entrypoint. The inherited lock stays open for the worker lifetime while user-facing errors retain exit code 2.
+
+`store.latest_experiment_id` performs the detached supervisor's read-only polling through the store boundary. It tolerates an uncreated/initializing database and explicitly closes each connection, avoiding descriptor leaks during long jobs.

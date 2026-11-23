@@ -577,3 +577,24 @@ The M8 fake plan additionally retains a deliberately unsupported AWQ fixture, cl
 The final M8 integration review found two existing runner edges affecting the GPU handoff: a completed experiment could be marked aborted if resumed after its old deadline, and a long agreement pass could exceed the remaining budget before the next guard. Completed resume is now an immediate no-op; agreement has a cancellation deadline, and startup readiness is bounded by remaining time. Focused tests cover the completed/deadline and hanging-agreement cases. These are prerequisite correctness fixes for the requested M8 end-to-end handoff, not changes to statistical thresholds or the experiment design.
 
 Adding goodput to the shared M8 analysis also requires explicitly classifying it as higher-is-better in both comparisons and A/A splits. A focused test prevents a naming-based latency default from misclassifying this newly exposed rate metric.
+
+### M9 prerequisite — detached automation
+
+The owner requested a campaign that continues if the assistant's usage allowance
+runs out. A stdlib Python launcher starts a new process session on the GPU host,
+with detached stdin and persistent log files; no assistant, tmux, or scheduler
+service is needed after launch. A fresh state directory and inherited file lock
+preserve one job record, while the runner's database lock still excludes conflicting
+execution. Progress is atomically replaced and keeps the experiment ID, stages,
+exit codes, deadline and backup failures. Code 1 from regress is a finding and
+permits subsequent reporting; other stage errors remain failures.
+
+The required max-hours cap bounds the whole automation workflow and is passed to
+the runner for a fresh experiment. Graceful cleanup and a bounded final backup can
+extend past that deadline. Resume preserves the runner's original budget. Optional
+hourly backups invoke the existing WAL-safe backup script with noninteractive SSH;
+without a destination, results are retained only on the GPU machine. No cloud
+credentials, rental shutdown, reboot recovery or automatic assistant wake-up are
+implied. Live execution is not run (needs GPU); process detachment, deadline aborts,
+terminal statuses and report-stage continuation are tested using an explicitly fake
+CLI, in addition to the existing full fake campaign tests.
