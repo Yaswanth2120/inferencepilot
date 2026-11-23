@@ -29,7 +29,7 @@ def test_cli():
         ["inferencepilot", "selftest"], env=fake_env(), check=False, capture_output=True, text=True
     )
     assert result.returncode == 0
-    assert "pending M6" in result.stdout
+    assert "Offline selftest passed" in result.stdout
     result = subprocess.run(
         ["inferencepilot", "unknown"], env=fake_env(), check=False, capture_output=True
     )

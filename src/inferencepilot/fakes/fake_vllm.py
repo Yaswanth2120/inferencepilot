@@ -3,26 +3,12 @@
 import asyncio
 import json
 import random
-from dataclasses import dataclass
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-
-@dataclass
-class Settings:
-    model: str = "fake-model"
-    seed: int = 0
-    healthy: bool = True
-    token_delay: float = 0.001
-    prefill_per_token: float = 0.0001
-    concurrency_slowdown: float = 0.1
-    jitter: float = 0.1
-    inject_slowdown_pct: float = 0
-    failure_rate: float = 0
-    hang_rate: float = 0
-    hang_seconds: float = 3600
+from inferencepilot.fakes.timing import Settings, delays
 
 
 class Completion(BaseModel):
@@ -34,20 +20,6 @@ class Completion(BaseModel):
     seed: int = 0
     logprobs: int | None = None
     return_tokens_as_token_ids: bool = False
-
-
-def delays(settings, prompt_tokens, output_tokens, active, seed):
-    rng = random.Random(settings.seed + seed)
-    scale = (1 + settings.inject_slowdown_pct / 100) * (
-        1 + settings.concurrency_slowdown * max(0, active - 1)
-    )
-    values = [settings.prefill_per_token * prompt_tokens] + [
-        settings.token_delay for _ in range(output_tokens)
-    ]
-    return [
-        max(0, value * scale * (1 + rng.uniform(-settings.jitter, settings.jitter)))
-        for value in values
-    ]
 
 
 def chunk(index, chat, finished=False):

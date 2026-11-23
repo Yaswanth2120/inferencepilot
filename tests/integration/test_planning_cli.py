@@ -44,7 +44,7 @@ def test_plan_and_dry_run(tmp_path):
     real_run = subprocess.run(
         [command[0], "run", "--plan", str(path)], capture_output=True, text=True, check=False
     )
-    assert real_run.returncode == 2 and "not implemented until M6" in real_run.stdout
+    assert real_run.returncode == 2 and "--db is required" in real_run.stdout
 
 
 def test_missing_config_errors(tmp_path):

@@ -22,7 +22,7 @@ inferencepilot = "inferencepilot.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"inferencepilot.fakes" = ["fake_bin/vllm"]
+"inferencepilot.fakes" = ["fake_bin/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
