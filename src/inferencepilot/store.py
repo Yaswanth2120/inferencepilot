@@ -167,3 +167,22 @@ class Store:
                     f"INSERT INTO regression_results ({','.join(values)}) VALUES ({','.join('?' for _ in values)})",
                     tuple(values.values()),
                 )
+
+
+def latest_experiment_id(path):
+    """Read a committed experiment identity without creating a database or migrating it."""
+    path = Path(path).resolve()
+    if not path.exists():
+        return None
+    connection = None
+    try:
+        connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1)
+        row = connection.execute(
+            "SELECT id FROM experiments ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+        return row[0] if row else None
+    except sqlite3.Error:
+        return None
+    finally:
+        if connection is not None:
+            connection.close()

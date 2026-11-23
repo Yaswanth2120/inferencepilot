@@ -178,3 +178,13 @@ M8 local verification: full suite **274 passed**; the final goodput-direction an
 deadline checks **15 passed** (overlapping focused suite); `ruff check .` passed.
 The complete synthetic report and both plots were generated and visually checked.
 Campaign preview, fake calibration and WAL-safe backup have offline test coverage.
+
+Detached M9 automation is available through `scripts/detached_campaign.py`: it runs
+on the GPU host independently of this chat, saves progress/logs, runs report stages,
+and optionally backs up hourly. See the [detached workflow](docs/RUNBOOK_GPU.md#detached-automation-across-an-assistant-usage-reset).
+It enforces an explicit runtime cap but does not terminate rental billing or
+reconnect an assistant automatically. Live: not run (needs GPU).
+
+Detached-automation verification: full offline suite **278 passed**, plus **4 passed**
+in the final focused suite (overlapping coverage, including final WAL-safe backup).
+Ruff passed. No rental host was contacted and live execution is not run (needs GPU).

@@ -133,3 +133,67 @@ storage billing active, and destruction permanently removes instance data; see
 [Vast's billing guidance](https://github.com/vast-ai/docs/blob/main/guides/reference/faq/billing.mdx).
 M9 is complete only after real evidence and fixture checks are committed. M10 remains
 optional and M11 release work follows; M8 completion is not a v0.1.0 release claim.
+
+## Detached automation across an assistant usage reset
+
+Run the following **on the GPU host**, after setup, probes, measured calibration,
+and plan review. It uses the active virtualenv and starts an independent process
+session; it does not depend on Codex tokens, an open SSH connection, or tmux.
+
+```sh
+python scripts/detached_campaign.py start \
+  --plan data/plan.json --db data/campaign.db \
+  --state-dir data/jobs/qwen3-first --max-hours 5
+```
+
+Five hours is an explicit example cap, not a promise the full campaign will fit.
+The supervisor deadline includes doctor, the campaign and analysis. It also passes
+the cap to the runner. Cleanup and a final bounded backup can take additional time.
+If the cap expires, saved reps remain available but the report stage may not run;
+continue later by resuming or analyzing the saved database. A job cap stops workload
+processes; **it does not stop billing or destroy the rental instance**.
+
+The command returns a worker PID, log path and status path. The worker runs doctor,
+then run/resume, analyze, validate, regress, recommend and report. A regression exit
+code 1 is retained as a finding and does not suppress the report. Other failed
+stages stop the workflow with an explicit error. There is no blind crash/reboot
+retry: inspect errors and process ownership before an explicit resume.
+
+```sh
+python scripts/detached_campaign.py status --state-dir data/jobs/qwen3-first
+tail -n 80 data/jobs/qwen3-first/worker.log
+```
+
+`status.json` contains the experiment ID as soon as the DB has it, phase, deadline,
+PID, stage exit codes, backup history and terminal error/status. Reports are under
+`data/jobs/qwen3-first/reports/`. The plan/options are saved in `job.json`. Use a
+fresh state directory for each attempt. To resume a saved experiment:
+
+```sh
+python scripts/detached_campaign.py start \
+  --plan data/plan.json --db data/campaign.db --resume EXPERIMENT_ID \
+  --state-dir data/jobs/qwen3-resume --max-hours 5
+```
+
+The runner retains its original deadline; resuming does not replenish that budget.
+If an experiment exhausted its cap, inspect the saved evidence and choose the next
+scope explicitly rather than relabelling it completed or silently raising its cap.
+
+For hourly off-machine backups, configure noninteractive SSH authentication from
+the GPU host to an owner-controlled destination and append:
+
+```sh
+--backup-to OWNER@BACKUP_HOST:/absolute/path/inferencepilot-backup --backup-seconds 3600
+```
+
+Without `--backup-to`, results stay on the GPU host; no external backup is implied.
+Backup failures are recorded in status and logs while the campaign continues. Test
+the destination first. For the documented state directory under `data/`, DB backup,
+raw artifacts, job logs/status and completed reports are all included. Keep backup
+destinations outside the source data directory. Machine reclamation or reboot can
+still stop the detached worker; a detached process is not persistent cloud storage.
+
+When assistant usage is available again, return with the SSH details and state
+path. The assistant can reconnect, inspect status, fetch the DB/raw/report archive,
+and finish analysis if needed. A usage reset does not automatically wake an
+assistant or trigger a reconnection. No automatic rental shutdown is configured.
