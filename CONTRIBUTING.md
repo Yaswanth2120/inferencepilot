@@ -36,3 +36,11 @@ Do not merge future branches into main merely because they exist.
 No empty bug branches are needed: create them when a concrete defect is assigned.
 For a solo maintainer, the main protection requires CI and a PR, with zero required
 external approvals so it does not make self-maintenance impossible.
+
+## Dependent milestones
+
+If the previous milestone PR is still open, fast-forward the new milestone
+branch to that previous branch and open a stacked PR against it. This keeps the
+new PR diff limited to its own milestone. CI runs for PRs targeting any branch.
+After the earlier PR is squash-merged, retarget the next PR to main and preserve
+a readable history; do not bypass protections to unblock a dependency.

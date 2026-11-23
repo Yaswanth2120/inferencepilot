@@ -317,3 +317,148 @@ version and unavailable help output. It verifies both produce actionable diagnos
 `test_env.test_successful_doctor` now supplies matching version and help in its
 existing success mock. The intended success behavior is unchanged; M1 introduces
 new prerequisites that this mock must satisfy.
+
+# M2 statistics engine
+
+`stats._values` copies observations and rejects insufficient, nonnumeric, or
+nonfinite data. Central validation keeps public functions consistent and prevents
+silently removing failed measurements from a statistical result.
+
+`stats._count` checks integer counts and their lower bound.
+Booleans are excluded even though Python treats them as integers, because a
+request for True bootstrap draws is almost certainly a caller mistake.
+
+`stats._probability` validates an open-interval probability.
+Confidence, alpha, and power cannot have endpoint values that make normal
+quantiles infinite or intervals undefined.
+
+`stats.mean` computes the arithmetic mean with an accurate floating-point sum.
+It accepts an iterable so callers can aggregate launch observations without
+building additional data structures themselves.
+
+`stats.percentile` sorts observations and applies linear/type-7 interpolation.
+A convex weighted sum avoids subtracting opposite-sign large numbers solely
+to interpolate between them.
+
+`stats.median` delegates to the 50th percentile.
+This gives odd and even sample sizes the same documented interpolation rule.
+
+`stats.standard_deviation` computes sample SD with denominator n-1.
+At least two observations are required because one observation cannot estimate
+sample variability.
+
+`stats.coefficient_of_variation` divides sample SD by the absolute mean.
+Its result is dimensionless and it rejects a zero mean instead of inventing
+an infinite or zero relative variability.
+
+`stats.bootstrap_ci` repeatedly resamples scalar rep-level observations and
+returns percentile bounds on their mean. A local RNG makes runs reproducible
+without changing application-wide random state or treating requests as independent reps.
+
+`stats.permutation_test` compares absolute differences of group means over
+all feasible label assignments or seeded random assignments. It records which
+method/count was used and adds one to Monte Carlo counts so simulation cannot
+produce a spuriously zero p-value.
+
+`stats.holm_adjust` sorts a family of p-values, applies decreasing family-size
+multipliers, and takes their running maximum. It returns adjusted probabilities
+in the original order so callers can associate each result with the correct metric.
+
+`stats.wilson_interval` computes a two-sided Wilson score interval for a proportion.
+It validates integer counts and keeps rounding at the boundaries inside [0,1].
+
+`stats.mcnemar_exact` computes a paired binary comparison from the two discordant
+counts using an exact binomial tail. Integer combinations delay floating-point
+rounding until the final probability ratio.
+
+`stats.minimum_detectable_effect` estimates within-launch and between-launch
+variance, then the normal-approximation percent shift for the requested design.
+Keeping candidate-launch noise in its standard error prevents extra reps within
+one launch from creating an artificial claim of high power.
+
+# M2 tests
+
+`test_percentile_worked_arrays` checks fixed arrays against hand-computed type-7
+percentiles, including endpoints, ties, negative values, and large opposite signs.
+The expected values do not depend on importing NumPy or calling the implementation.
+
+`test_descriptive_worked_values` checks mean, median, sample SD, and CV on simple
+worked data. It also checks constant data and cancellation to verify numerical
+behavior beyond a single happy-path example.
+
+`test_bootstrap_worked_seed_and_reproducibility` checks a tiny seeded draw sequence
+whose resampled means can be calculated by hand. It also exercises the default
+10,000-resample interval and constant observations.
+
+`test_resampling_does_not_mutate_global_rng_or_inputs` compares global RNG state
+and input values around both resampling algorithms. Constant data provide the
+independently known interval and p-value while checking those side effects.
+
+`test_exact_permutation_enumerated_by_hand` enumerates the six two-versus-two
+assignments explicitly in comments. Shift, tiny-scale, duplicate, and group-swap
+checks ensure tie handling does not change the mathematical comparison.
+
+`test_monte_carlo_worked_draws` records six fixed sampled assignments and their
+two extreme statistics. It verifies the conservative 3/7 p-value, reproducibility,
+and the positive correction when no simulated assignment is extreme.
+
+`test_permutation_default_method_boundary` checks combination counts on both
+sides of the 20,000-assignment cutoff. Tied inputs make p=1 known by hand while
+confirming that the default Monte Carlo branch performs 100,000 draws.
+
+`test_holm_worked_example` checks a sorted/multiplied/running-maximum correction
+and restoration of original order. It also checks ties, clipping, and an empty family.
+
+`test_wilson_worked_values` checks the score formula on a balanced binomial sample
+and zero/all-success boundaries. A confidence level with z=1 supplies an additional
+closed-form interval independent of the default z value.
+
+`test_mcnemar_worked_tables` checks exact discordance tails from constructed 2x2
+tables, including no differences and symmetry. Large balanced counts verify the
+integer-ratio computation does not overflow from early conversion to floats.
+
+`test_mde_balanced_worked_components` checks each variance component, standard error,
+and percent MDE against the documented three-launch example. It also checks the
+result retains sample counts and the requested alpha/power.
+
+`test_mde_unbalanced_worked_components` derives the effective replication and
+variance terms for launch sizes two, three, and two. It catches the mistake of
+using a balanced-design formula after a partial or interrupted launch.
+
+`test_mde_zero_clipping_scaling_and_replication` checks nonnegative variance
+truncation, constant data, scale invariance, and changes in replication. It
+specifically verifies that extra candidate reps cannot remove between-launch noise.
+
+`test_invalid_observations` rejects empty, nonfinite, string, and boolean data.
+No bad measurement should silently vanish or be coerced into a valid numeric sample.
+
+`test_invalid_percentiles` rejects probabilities outside the percentile scale
+and nonnumeric/nonfinite values. These inputs cannot refer to a valid interpolation.
+
+`test_insufficient_data_and_zero_mean` checks minimum sample sizes and the undefined
+zero-mean CV. It ensures a result is not returned when its variance or denominator
+cannot be estimated from the supplied data.
+
+`test_invalid_bootstrap_parameters` checks confidence, counts, and seeds.
+Invalid settings must fail before consuming random draws or allocating resamples.
+
+`test_invalid_permutation_parameters` checks the enumeration limit, Monte Carlo
+count, and seed. This avoids silently changing a requested statistical method
+because of an invalid loop bound.
+
+`test_invalid_holm_probabilities` rejects p-values outside [0,1] or without a
+finite numeric value. A malformed test cannot silently enter a correction family.
+
+`test_invalid_wilson_inputs` rejects inconsistent counts and invalid confidence.
+The score interval is defined only for an actual binomial count and positive n.
+
+`test_invalid_mcnemar_counts` rejects negative, fractional, and boolean discordances.
+The exact binomial calculation requires nonnegative integer paired counts.
+
+`test_invalid_mde_inputs` checks independent-launch and within-launch replication,
+finite inputs, nonzero mean, and valid planning settings. It prevents a numerical
+MDE from masking a design that cannot estimate its own noise.
+
+`test_source_has_no_numpy_imports` parses every Python module under src and
+inspects its import statements. This enforces the project's no-NumPy library
+constraint without installing NumPy or relying on a fragile text match.
