@@ -196,3 +196,23 @@ class ExperimentPlan(Spec):
     estimated_gpu_hours: float = Field(ge=0)
     budget_exceeded: bool
     warnings: list[str]
+
+
+class LoadSpec(Spec):
+    mode: Literal["closed", "open"] = "closed"
+    concurrency: int | None = Field(default=None, gt=0, strict=True)
+    request_rate: float | None = Field(default=None, gt=0, strict=True)
+
+    @model_validator(mode="after")
+    def valid_load(self):
+        if self.mode == "closed" and (self.concurrency is None or self.request_rate is not None):
+            raise ValueError("closed load needs concurrency and no request_rate")
+        if self.mode == "open" and (self.request_rate is None or self.concurrency is not None):
+            raise ValueError("open load needs request_rate and no concurrency cap")
+        return self
+
+
+class SLOSpec(Spec):
+    ttft_ms: float = Field(ge=0, strict=True)
+    tpot_ms: float = Field(ge=0, strict=True)
+    e2e_ms: float = Field(ge=0, strict=True)

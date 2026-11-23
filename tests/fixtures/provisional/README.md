@@ -18,3 +18,13 @@ for parser tests. Its shapes are informed by the versioned
 and [CUDA graph design](https://docs.vllm.ai/en/v0.15.1/design/cuda_graphs/).
 No part of it is a captured 0.15.1 GPU startup log. M9 must replace it with real
 owner-provided output or document every remaining provisional field.
+
+
+M4 refreshes `bench.json` to the consumed v0.15.1 detailed generation schema:
+backend/counts and TTFT/gap arrays, with no invented per-request E2E array.
+`bench_worked.json` is a hand-constructed three-request example, including bundled
+stream gaps, with independently worked metric expectations in tests.
+`bench_commands.json` contains exact expected argv for all eight configured
+closed-loop points and three open-loop chat rates. These are contract snapshots,
+not commands captured from a real campaign. Pinned source links are in
+`docs/VLLM_COMPATIBILITY.md`; M9 must replace/document provisional result fixtures.
