@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from inferencepilot.fakes.command import main
+
+raise SystemExit(main())

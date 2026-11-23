@@ -1,0 +1,3 @@
+PROVISIONAL: constructed fake log; not captured on hardware.
+INFO [core.py:0] Initializing a V1 LLM engine (vFAKE) with config: model='fake-model', max_seq_len=8192, quantization=None, enforce_eager=False, enable_prefix_caching=True, enable_chunked_prefill=True
+INFO [scheduler.py:0] Chunked prefill is enabled with max_num_batched_tokens=8192.
