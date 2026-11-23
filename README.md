@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M0 offline foundation.**
+constraint-based recommendation. **Current stage: M1 configuration and experiment planning.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -34,8 +34,10 @@ not need those tools. It never loads a model or imports vLLM.
   provisional resolved configuration, and cleans up its child after SIGTERM.
 - [x] Doctor handles unavailable tools and captures a best-effort snapshot.
 - [x] Ruff check and the explicitly limited M0 selftest run locally.
-- [ ] Linux and the full Python 3.10–3.12 matrix verified (CI configured only).
-- [ ] M1–M8 planner, statistics, adapters, runner, quality, detector, and reports.
+- [x] M0 setup passed all six macOS/Linux and Python 3.10–3.12 CI jobs.
+- [x] M1 deterministic OFAT plans, baseline placement, calibration estimate, and dry-run.
+- [x] M1 configuration validation and missing-flag checks against fake full help.
+- [ ] M2–M8 statistics, adapters, runner, quality, detector, and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
 No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
@@ -64,13 +66,14 @@ whitespace-based and output tokens are deterministic strings, not model output.
 
 ## Prior art and scope
 
-vLLM already supplies benchmark tooling; GuideLLM and similar tools generate
-load. InferencePilot's planned contribution is lifecycle orchestration,
-replicated experiments, noise-aware comparisons with MDE, detector validation,
-paired quality evaluation, and recommendations among tested configurations.
-These features are not implemented in M0. Before M1, select a pinned vLLM
-version and inspect its sweep capabilities to refine this comparison.
-
+vLLM 0.15.1 already provides [parameter sweeps](https://docs.vllm.ai/en/v0.15.1/benchmarking/sweeps/),
+server startup, repeated runs, resume, SLA tuning, and visualization. Those are
+not claimed as novel. InferencePilot's intended focus is replicated launch
+placement, statistical comparisons with MDE and multiple-test correction,
+count-backed detector validation, paired quality checks, and recommendations
+with uncertainty. M1 implements planning; the statistical features come later.
+See [versioned compatibility notes](docs/VLLM_COMPATIBILITY.md) for sources and
+remaining live verification.
 No web UI, cloud rental orchestration, multi-GPU serving, or other engines are
 planned. Synthetic workloads and fake measurements cannot establish real
 latency, quality, quantization compatibility, or speedups. Real results will be
@@ -85,8 +88,7 @@ status. `make campaign` and `make report` fail explicitly until implemented.
 This workspace marked files inside `.venv` as hidden on macOS. Python then
 skipped the editable-install `.pth` file. A normally named `venv/` avoids this
 local issue; no import-path workaround was added to the package or tests.
-The workspace currently has no Git repository, so the snapshot reports the Git
-SHA as unavailable until the owner initializes one.
+Git is now initialized; the snapshot records the current commit when available.
 
 ## Recorded M0 verification
 
@@ -100,4 +102,53 @@ inferencepilot selftest         -> M0 CLI wiring OK; full pipeline pending M6
 inferencepilot doctor           -> exit 3; missing vLLM/NVIDIA/lm-eval reported
 ```
 
-Linux CI has not run. Live paths: not run (needs GPU).
+The subsequent M0 setup passed [all six CI jobs](https://github.com/Yaswanth2120/inferencepilot/actions/runs/45218908132).
+Live paths: not run (needs GPU).
+
+
+## M1 planning quickstart
+
+With the virtualenv activated:
+
+```sh
+mkdir -p data
+inferencepilot plan --config configs/experiment_qwen3_8b.yaml --out data/plan.json
+inferencepilot run --plan data/plan.json --db data/demo.db --dry-run
+```
+
+The example plans 12 launches: three baselines, seven OFAT candidates, one
+unresolved combined candidate, and one seeded eager regression. Baselines occupy
+indices 0, floor(total/2), and total-1. The same input and seed produce byte-identical
+JSON, and each point contains five stored rep seeds. Requested flags remain
+requests until the server's resolved configuration is captured.
+
+The illustrative estimate is 5.9067 GPU hours from **synthetic calibration**;
+it is not a measured campaign duration. It includes warmup estimates, startup,
+teardown, and a 600-second extra reserve. Open-loop runtime is excluded until
+baseline capacity is measured; allocate additional budget then. The budget flag
+in M1 previews the cap; enforcement and actual execution arrive in M6.
+
+The interface target is pinned to vLLM 0.15.1. `doctor --vllm-bin PATH` checks its
+version and all currently used serve flags against full help. Real hardware
+compatibility and flag effectiveness are unverified: not run (needs GPU).
+
+## Repository workflow and license
+
+Public repository: https://github.com/Yaswanth2120/inferencepilot. Licensed under
+[MIT](LICENSE). `main` requires a PR, six successful offline CI jobs, a branch
+up to date with main, and resolved conversations; force pushes and deletion are
+blocked. M0 has a historical branch; M1 and every future milestone have named
+branches as requested. Future branches are reserved references, not completed
+milestones. See [CONTRIBUTING.md](CONTRIBUTING.md) for branch names, conventional
+commits, and the squash-merge workflow.
+
+M1 local verification (macOS, Python 3.12.9):
+
+```text
+pytest                  -> 63 passed in 3.33s
+ruff check .            -> All checks passed!
+inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
+plan + run --dry-run    -> 12 launches, 8 points each, 5.9067 illustrative GPU hours
+```
+
+M1 live paths: not run (needs GPU).

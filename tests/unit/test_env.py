@@ -15,6 +15,16 @@ def test_missing_doctor(monkeypatch, capsys):
 def test_successful_doctor(monkeypatch, capsys):
     monkeypatch.setattr(env.shutil, "which", lambda value: "/fake/" + value)
     monkeypatch.setattr(env, "snapshot", lambda: {"gpu": {"available": True}})
+    monkeypatch.setattr(
+        env,
+        "command_output",
+        lambda argv: {
+            "available": True,
+            "output": env.PINNED_VLLM_VERSION
+            if argv[-1] == env.VERSION_FLAG
+            else " ".join(flag for flags in env.USED_FLAGS.values() for flag in flags),
+        },
+    )
     assert env.doctor("vllm") == 0
     assert json.loads(capsys.readouterr().out)["errors"] == []
 

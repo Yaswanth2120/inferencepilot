@@ -9,7 +9,14 @@ import sys
 from pathlib import Path
 
 from inferencepilot.fakes.fake_vllm import Settings, create_app, delays
-from inferencepilot.vllm_flags import BENCH_FLAGS, SERVE_FLAGS
+from inferencepilot.vllm_flags import (
+    BENCH_FLAGS,
+    HELP_ALL_FLAG,
+    HELP_FLAG,
+    PINNED_VLLM_VERSION,
+    SERVE_FLAGS,
+    VERSION_FLAG,
+)
 
 
 def add_flags(parser, flags):
@@ -23,6 +30,8 @@ def add_flags(parser, flags):
         "save_detailed",
     }
     for name, flag in flags.items():
+        if flag == os.environ.get("INFERENCEPILOT_FAKE_OMIT_FLAG"):
+            continue
         parser.add_argument(flag, dest=name, action="store_true" if name in switches else "store")
 
 
@@ -152,7 +161,9 @@ def serve(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Offline fake vLLM; provisional interface")
-    parser.add_argument("--version", action="version", version="fake-vllm provisional")
+    parser.add_argument(
+        VERSION_FLAG, action="version", version=f"fake-vllm {PINNED_VLLM_VERSION} provisional"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     server = commands.add_parser("serve")
     server.add_argument("model")
@@ -160,5 +171,7 @@ def main():
     benchmark = commands.add_parser("bench")
     modes = benchmark.add_subparsers(dest="mode", required=True)
     add_flags(modes.add_parser("serve"), BENCH_FLAGS)
-    args = parser.parse_args()
+    args = parser.parse_args(
+        [HELP_FLAG if value == HELP_ALL_FLAG else value for value in sys.argv[1:]]
+    )
     return serve(args) if args.command == "serve" else bench(args)

@@ -161,3 +161,159 @@ It replaces only the clock wait so the test can compare exact scaling cheaply.
 
 `test_stream_applies_seeded_slowdown.exercise` consumes a streaming request for supplied
 settings. It keeps both comparison runs identical apart from the injected slowdown.
+
+# M1 additions and changed functions
+
+`ConfigSpec.valid_combination` checks the variant's model and quantization pair,
+then the token-budget constraints. It rejects contradictory requests before any
+server command can be assembled.
+
+`ConfigSpec.argv` converts a validated configuration into a subprocess argument
+list using the central mapping. Both prefix caching and chunked prefill are
+explicit in either direction so engine defaults cannot silently choose them.
+
+`WorkloadSpec.valid_workload` checks positive, unique concurrency and consistent
+prefix dataset fields. Those checks prevent ambiguous point labels and malformed
+synthetic workloads before calibration lookup.
+
+`Factors.unique_levels` rejects empty or duplicate factor lists.
+Each OFAT candidate therefore represents a distinct requested change.
+
+`Calibration.positive_reps` rejects nonpositive point durations.
+Nonfinite values are already rejected by the common model configuration so an
+estimate cannot hide NaN or infinite costs.
+
+`ExperimentSpec.valid_experiment` verifies the reference baseline, workload names
+and context sizes, calibration coverage, and optional probe evidence. It also
+rejects misspelled probe keys rather than quietly ignoring hardware evidence.
+
+`planner.changed_config` merges one update into a baseline and validates the
+result again. Pydantic model_copy can bypass validation, so this uses full validation.
+
+`planner.probe_for` reads support status and evidence for one requested factor.
+Missing evidence returns pending so planning never implies a successful live probe.
+
+`planner.configurations` creates baseline, OFAT, deferred combined, and eager
+regression records. Weight identity fields move together as one conceptual factor;
+unsupported records keep their evidence for reporting.
+
+`planner.points` creates each workload/concurrency point and its five stored rep
+seeds. It computes point cost from calibration with proportional warmup reserve,
+using a separate seeded RNG so schedule changes do not change prompt seeds.
+
+`planner.make_plan` randomizes supported/pending OFAT entries and inserts the three
+baseline launches at exact bookends and midpoint. It totals costs and records
+probes, deferred selection, and unknown open-loop runtime as explicit limitations.
+
+`plan_commands.plan_json` serializes a plan with sorted keys and a final newline.
+No timestamps or paths are inserted, so identical input produces identical bytes.
+
+`plan_commands.print_schedule` prints launch order, calibration costs, budget, and
+limitations. A budget override changes the preview cap without editing the plan.
+
+`plan_commands.plan_command` reads YAML, validates it, builds a plan, and writes JSON.
+It converts configuration and filesystem errors into the specified usage-error code.
+
+`plan_commands.run_command` provides a read-only dry-run of a serialized plan.
+It reconstructs derived fields to reject tampering and explicitly refuses live
+execution until M6 implements orchestration.
+
+`env.check_flags` requests complete help for each currently used vLLM command and
+extracts option names. It returns immediately on an unavailable help command or
+missing flags so a mismatched interface cannot be treated as compatible.
+
+`env.doctor` now checks the selected executable's pinned version and complete help
+in addition to prerequisites and snapshot information. This versioned check is
+still an environment diagnostic and never starts a real serving process.
+
+`cli.main` now wires plan and run arguments to separate handlers.
+Filesystem access and planning logic remain outside argument parsing.
+
+`command.add_flags` can now omit one option through the fake-only environment
+control. The missing option disappears from actual generated help, allowing a
+real subprocess test of doctor's mismatch handling.
+
+`command.main` now prints the fake's interface version and accepts full-help mode.
+It translates that mode to argparse's ordinary help without importing real vLLM.
+
+`tests.conftest.example` loads a fresh example dictionary for each test.
+Tests can modify it to construct invalid input without sharing mutable state.
+
+`test_config.test_explicit_flags` compares baseline argv against a complete worked
+argument list and checks opposite boolean flags. This catches omitted defaults
+and incorrect boolean direction mapping.
+
+`test_config.test_variant_mapping` checks all four weight identities and quantization
+arguments. It verifies that model name and quantization move together consistently.
+
+`test_config.test_invalid_server_config` parametrizes bad model pairs, memory,
+token budgets, ports, and unknown keys. Matching validation messages ensures users
+get meaningful configuration errors rather than later subprocess failures.
+
+`test_config.test_invalid_workload` tests invalid concurrency and prefix fields.
+These errors would otherwise create duplicate points or an incoherent dataset.
+
+`test_config.test_example_validation` verifies the committed example parses and
+retains the intended shared prefix length. This makes the quickstart example part
+of the tested interface.
+
+`test_config.test_invalid_experiment` constructs missing calibration, duplicate
+levels/workloads, unprobed optional factors, invalid baseline/lengths, and bad costs.
+It checks each rejects clearly without weakening the fixed five-rep requirement.
+
+`test_planner.test_deterministic_plan_and_ofat` compares serialized hashes, roundtrips
+the plan, and inspects each candidate's changed fields. It also verifies that the
+combined configuration is unresolved rather than invented.
+
+`test_planner.test_schedule_baseline_positions_and_dependencies` checks exact baseline
+indices for full and reduced factor sets. It ensures combined selection follows
+every OFAT candidate and baseline launch ordinals stay distinct.
+
+`test_planner.test_seed_changes_order_but_not_membership` compares plans from two
+experiment seeds. It checks that randomization changes ordering and request seeds
+without changing which configurations are tested.
+
+`test_seed_changes_order_but_not_membership.labels` extracts ordered configuration
+labels for comparison. A named helper keeps the ordering assertion readable.
+
+`test_planner.test_hand_computed_estimate_and_stored_seeds` checks the documented
+1722-second launch and 21264-second total arithmetic. It also checks all launches
+carry eight points and five comparable stored seeds per point.
+
+`test_planner.test_budget_and_unsupported_probe_visible` constructs a budget overrun
+and an unsupported checkpoint. It verifies that evidence stays visible while the
+unsupported configuration gets no scheduled launch.
+
+`test_planner.test_optional_factor_probe` supplies evidence for disabled chunked
+prefill. It confirms the optional OFAT configuration is then included in the plan.
+
+`test_planner.test_failed_baseline_probe` supplies a failed baseline load result.
+It checks planning refuses an experiment without a usable reference configuration.
+
+`test_planning_cli.test_plan_and_dry_run` runs the installed CLI twice, compares file
+hashes, and checks costs and an overridden budget. It also proves the command
+refuses execution without dry-run before a runner exists.
+
+`test_planning_cli.test_missing_config_errors` requests a nonexistent YAML file.
+It checks the CLI returns usage-error code 2 and does not leave a misleading plan.
+
+`test_planning_cli.test_invalid_dry_run_budget` supplies zero, negative, infinite,
+and NaN budget overrides. These cannot become valid wall-clock campaign limits.
+
+`test_planning_cli.test_tampered_plan_rejected` removes a launch from a saved plan.
+It checks reconstruction catches derived data that no longer matches its experiment.
+
+`test_planning_cli.test_fake_help_and_missing_flag` executes the fake's real help
+and then hides a negative boolean option. Exact error comparison catches accidental
+substring matches with the corresponding positive flag.
+
+`test_planning_cli.test_doctor_with_fake_help` runs doctor using the actual fake
+binary while stubbing hardware availability. It checks success and missing-option
+failure without implying any real GPU or vLLM validation.
+
+`test_planning_cli.test_wrong_version_and_help_failure` simulates an incompatible
+version and unavailable help output. It verifies both produce actionable diagnostics.
+
+`test_env.test_successful_doctor` now supplies matching version and help in its
+existing success mock. The intended success behavior is unchanged; M1 introduces
+new prerequisites that this mock must satisfy.

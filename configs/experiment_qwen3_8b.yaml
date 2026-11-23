@@ -1,0 +1,54 @@
+# Demonstration only: replace with measured calibration before the live campaign.
+name: qwen3-8b-demo
+seed: 42
+vllm_version: 0.15.1
+max_gpu_hours: 14
+reps: 5
+baseline:
+  seed: 42
+factors:
+  variants: [bf16, fp8_online, awq, fp8_ckpt]
+  prefix_caching: [true, false]
+  max_num_batched_tokens: [2048, 8192, 16384]
+  max_num_seqs: [64, 256]
+  chunked_prefill: [true]
+  kv_cache_dtype: [auto]
+workloads:
+  - name: chat
+    dataset: random
+    input_tokens: 256
+    output_tokens: 256
+    concurrency: [1, 8, 32, 64]
+    num_prompts: 200
+    warmups: 10
+  - name: rag
+    dataset: random
+    input_tokens: 4096
+    output_tokens: 256
+    concurrency: [4, 16]
+    num_prompts: 100
+    warmups: 10
+  - name: prefix
+    dataset: prefix_repetition
+    shared_prefix_tokens: 2048
+    input_tokens: 256
+    output_tokens: 128
+    concurrency: [16, 64]
+    num_prompts: 200
+    warmups: 10
+calibration:
+  source: synthetic
+  note: Illustrative seconds only; NOT a measured GPU calibration.
+  startup_seconds: 180
+  teardown_seconds: 30
+  extra_seconds: 600
+  rep_seconds:
+    chat@1: 120
+    chat@8: 30
+    chat@32: 15
+    chat@64: 12
+    rag@4: 60
+    rag@16: 24
+    prefix@16: 15
+    prefix@64: 8
+probes: {}
