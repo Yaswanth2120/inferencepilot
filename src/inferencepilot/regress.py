@@ -106,7 +106,9 @@ def cases_for(grouped, baseline_id, candidate_id):
             point_key=point,
             workload=point.split(":")[0],
             metric=metric,
-            direction="higher_better" if "throughput" in metric else "lower_better",
+            direction="higher_better"
+            if metric in ("request_throughput", "output_throughput", "goodput")
+            else "lower_better",
             baseline=list(grouped.get((baseline_id, point, metric), {}).values()),
             candidate=list(grouped.get((candidate_id, point, metric), {}).values()),
         )
@@ -163,7 +165,9 @@ def validate(records):
                 dict(
                     point_key=point,
                     metric=metric,
-                    direction="higher_better" if "throughput" in metric else "lower_better",
+                    direction="higher_better"
+                    if metric in ("request_throughput", "output_throughput", "goodput")
+                    else "lower_better",
                     baseline=[reps for launch, reps in launches.items() if launch != held_out],
                     candidate=[launches[held_out]] if held_out in launches else [],
                 )

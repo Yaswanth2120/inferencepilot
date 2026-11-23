@@ -5,10 +5,13 @@ import signal
 import subprocess
 import sys
 
-from inferencepilot import analysis, regress
+import yaml
+
+from inferencepilot import analysis, regress, report
 from inferencepilot.config import ExperimentPlan
 from inferencepilot.plan_commands import plan_json, run_command
 from inferencepilot.planner import make_plan
+from inferencepilot.recommend import Constraints
 from inferencepilot.runner import Options, Runner
 from inferencepilot.store import Store, encode
 
@@ -23,6 +26,11 @@ def run(args):
     plan = ExperimentPlan.model_validate_json(Path(args.plan).read_text())
     if plan_json(plan) != plan_json(make_plan(plan.experiment)):
         raise ValueError("plan contents disagree with deterministic reconstruction")
+    constraints = (
+        Constraints.model_validate(yaml.safe_load(Path(args.constraints).read_text()))
+        if args.constraints
+        else None
+    )
     store = Store(args.db)
     previous = signal.signal(signal.SIGTERM, interrupt)
     try:
@@ -32,6 +40,9 @@ def run(args):
                 binary=args.vllm_bin,
                 quality_binary=args.lm_eval_bin,
                 quality_limit=args.quality_limit,
+                slos={k: v.model_dump() for k, v in constraints.request_slos.items()}
+                if constraints
+                else {},
             ),
         ).run(plan, budget=args.max_gpu_hours)
         print(encode(store.rows("experiments", id=identity)[0]))
@@ -97,6 +108,23 @@ def database_command(args):
             result = regress.validate(records)
             store.set_meta("validation:" + args.experiment, encode(result))
             print(encode(result))
+        elif args.command in ("recommend", "report"):
+            from pathlib import Path
+
+            if args.command == "recommend":
+                constraints = yaml.safe_load(Path(args.constraints).read_text())
+            else:
+                saved = store.rows("recommendations", experiment_id=args.experiment)
+                if not saved:
+                    raise ValueError("run recommend with constraints before report")
+                constraints = json.loads(
+                    max(saved, key=lambda row: row["created_at"])["constraints"]
+                )
+            bundle = report.prepare(store, args.experiment, constraints)
+            if args.command == "report":
+                print(encode({"files": report.write(bundle, args.out)}))
+            else:
+                print(encode(bundle["recommendation"]))
         else:
             print(encode(analysis.aggregate(records)))
         return 0

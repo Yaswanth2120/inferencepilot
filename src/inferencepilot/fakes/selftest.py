@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from inferencepilot import report
 from inferencepilot.config import ExperimentSpec
 from inferencepilot.planner import make_plan
 from inferencepilot.runner import Options, Runner
@@ -24,7 +25,7 @@ def mini_plan():
                 baseline={"port": port},
                 seed=42,
                 factors=dict(
-                    variants=["bf16"],
+                    variants=["bf16", "awq"],
                     prefix_caching=[True, False],
                     max_num_batched_tokens=[8192],
                     max_num_seqs=[256],
@@ -42,6 +43,12 @@ def mini_plan():
                         warmups=1,
                     )
                 ],
+                probes={
+                    "awq": {
+                        "status": "unsupported_on_hardware",
+                        "evidence": "SYNTHETIC unsupported fixture, not measured hardware compatibility",
+                    }
+                },
                 calibration=dict(
                     source="synthetic",
                     note="offline only",
@@ -76,6 +83,7 @@ def campaign(directory):
         quality_limit=4,
         agreement_count=2,
         agreement_tokens=3,
+        slos={"chat": {"ttft_ms": 500, "tpot_ms": 100, "e2e_ms": 15000}},
         timeouts=ServerTimeouts(readiness=10, terminate=5, kill=3, gpu_release=3, poll=0.05),
     )
     identity = Runner(store, options).run(mini_plan())
@@ -86,6 +94,13 @@ def campaign(directory):
     return store, identity
 
 
+def synthetic_constraints():
+    return dict(
+        points={"chat:closed:1": {"p95_ttft": 500, "p95_e2e": 15000}},
+        objective={"point": "chat:closed:1"},
+    )
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="inferencepilot-selftest-") as directory:
         store, identity = campaign(directory)
@@ -93,9 +108,15 @@ def main():
         assert len([launch for launch in records["launches"] if launch["status"] == "ok"]) == 6
         assert len(records["quality"]) == 6
         assert len(records["agreement"]) == 5
+        bundle = report.prepare(store, identity, synthetic_constraints())
+        report.write(bundle, Path(directory) / "report")
+        assert bundle["recommendation"]["chosen_config_id"] is not None
+        assert bundle["recommendation"]["rejected"][0]["label"] == "weights-awq"
+        for table in ("regression_results", "recommendations"):
+            assert store.rows(table, experiment_id=identity)
         store.close()
     print(
-        "Offline selftest passed: 6 launches, 120 reps, quality, agreement, idempotent resume. SYNTHETIC; live: not run (needs GPU)"
+        "Offline selftest passed: 6 launches, 120 reps, quality, agreement, resume, regression, A/A, recommendation and report. SYNTHETIC; live: not run (needs GPU)"
     )
     return 0
 

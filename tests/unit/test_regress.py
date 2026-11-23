@@ -53,3 +53,13 @@ def test_effect_bootstrap_and_family():
     assert bootstrap_effect_ci([99, 100, 101], [102, 103, 104], seed=5) == bootstrap_effect_ci(
         [99, 100, 101], [102, 103, 104], seed=5
     )
+
+
+def test_goodput_direction():
+    from inferencepilot.regress import cases_for
+
+    grouped = {
+        ("a", "chat:closed:1", "goodput"): {"baseline-launch": [100] * 5},
+        ("b", "chat:closed:1", "goodput"): {"candidate-launch": [110] * 5},
+    }
+    assert cases_for(grouped, "a", "b")[0]["direction"] == "higher_better"

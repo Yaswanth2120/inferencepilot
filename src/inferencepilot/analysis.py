@@ -23,6 +23,8 @@ def observations(records):
         values = {
             name: summary[name]["value"] for name in ("request_throughput", "output_throughput")
         }
+        if summary.get("goodput") is not None:
+            values["goodput"] = summary["goodput"]["value"]
         values.update(
             {
                 f"p95_{name}": d["p95"]
@@ -99,3 +101,73 @@ def combined_spec(records, baseline):
     return ConfigSpec.model_validate(
         {**baseline.model_dump(), **{k: v[1] for k, v in chosen.items()}}
     )
+
+
+def recommendation_inputs(records, aggregates, regressions, quality_filter="flexible-extract"):
+    """Join precomputed metrics and paired quality without repeating statistical calculations."""
+    result = []
+    for config in records["configs"]:
+        points = {}
+        for row in aggregates:
+            if row["config_id"] == config["id"]:
+                points.setdefault(row["point"], {})[row["metric"]] = row
+        launches = sorted(
+            [
+                launch
+                for launch in records["launches"]
+                if launch["config_id"] == config["id"] and launch["status"] == "ok"
+            ],
+            key=lambda launch: launch["started_at"],
+        )
+        latest = launches[-1]["id"] if launches else None
+        samples = [
+            q for q in records["quality"] if q["launch_id"] == latest and q["task"] == "gsm8k"
+        ]
+        quality = None
+        if samples:
+            metrics = json.loads(samples[-1]["metrics"])
+            if metrics.get("status") == "ok":
+                accuracy = metrics["filters"][quality_filter]
+                paired = metrics.get("paired", {}).get(quality_filter)
+                if config["role"] == "baseline":
+                    paired = {"n": accuracy["n"], "drop_percentage_points": 0, "mcnemar_p": 1}
+                if paired:
+                    quality = dict(
+                        accuracy=accuracy["accuracy"],
+                        n=paired["n"],
+                        drop_pp=paired["drop_percentage_points"],
+                        mcnemar_p=paired["mcnemar_p"],
+                    )
+        relevant = [r for r in regressions if r["candidate_config_id"] == config["id"]]
+        warnings = [
+            dict(
+                point=r["point_key"],
+                metric=r["metric"],
+                verdict=r["verdict"],
+                mde_pct=r["mde_pct"],
+                n_baseline=r["n_baseline"],
+                n_candidate=r["n_candidate"],
+            )
+            for r in relevant
+        ]
+        errors = []
+        if not launches:
+            errors.append(
+                "No successful measured server launch; unsupported, failed, or untested configuration"
+            )
+        if any(
+            not json.loads(launch["resolved_args"]).get("raw_matched_lines") for launch in launches
+        ):
+            errors.append("Resolved settings missing from startup evidence")
+        result.append(
+            dict(
+                id=config["id"],
+                label=config["label"],
+                role=config["role"],
+                points=points,
+                quality=quality,
+                warnings=warnings,
+                errors=errors,
+            )
+        )
+    return result
