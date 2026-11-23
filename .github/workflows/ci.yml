@@ -1,5 +1,14 @@
 name: offline
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, feature/m1-config-planner]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: offline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     strategy:

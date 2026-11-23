@@ -8,3 +8,7 @@ data/
 build/
 dist/
 venv/
+.env
+.env.*
+!.env.example
+.DS_Store
