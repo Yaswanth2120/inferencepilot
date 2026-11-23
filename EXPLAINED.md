@@ -987,3 +987,32 @@ decoded text cannot be accepted as token IDs.
 
 
 `cli.dispatch` wires argparse values to command handlers. `cli.main` turns configuration exceptions into a readable exit code 2, so CLI callers do not receive tracebacks for missing inputs.
+
+### M7 functions
+
+`src/inferencepilot/regress.py:verdict` — Provide the verdict operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/regress.py:compare_family` — Apply Holm once across every available point and metric for one candidate. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/regress.py:cases_for` — Provide the cases for operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/regress.py:compare_experiment` — Provide the compare experiment operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/regress.py:summary` — Provide the summary operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/regress.py:validate` — Leave out every physical baseline launch once; count both false directional findings. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/power.py:simulated_launch` — Provide the simulated launch operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/power.py:curve` — Provide the curve operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/power.py:main` — Run the offline campaign and check its launch, quality, and agreement records. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+
+`stats.bootstrap_effect_ci` independently resamples baseline and candidate rep values and computes a percent effect for each draw. It uses the shared percentile definition and refuses zero or negative baseline values, where percent changes would be undefined or misleading.
+
+`Store.replace_regressions` replaces one experiment's analysis in a single transaction. Re-running the detector therefore updates its evidence without duplicating old findings.
+
+`commands.power` launches the explicitly fake power tool in a separate process. This keeps fake code outside production library imports.
+
+`fake_vllm.timing` exposes only the fake scheduler's synthetic timing over HTTP. This makes repeated power experiments deterministic without pretending that host sleep timing measures GPU latency.

@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M6 persistent execution.**
+constraint-based recommendation. **Current stage: M7 regression detection.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -42,7 +42,7 @@ not need those tools. It never loads a model or imports vLLM.
 - [x] M4 benchmark argv snapshots, detailed-result parser, metric cross-checks, failure classification, and measured-capacity open-loop rates.
 - [x] M5 pinned quality command, paired sample statistics, and fake-server token agreement.
 - [x] M6 SQLite store, checkpointed runner, interruption/resume, budget cap, and complete offline selftest.
-- [ ] M7 regression detector and validation.
+- [x] M7 regression detector, A/A validation, and reproducible synthetic power curve.
 - [ ] M8 constraint-based recommendations and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
@@ -335,3 +335,17 @@ machine may leave a foreign server that requires owner cleanup before resuming.
 Live execution: **not run (needs GPU)**.
 
 M6 verification: `pytest -q` — **246 passed**; `ruff check .` passed. Live: not run (needs GPU).
+
+## M7 regression detector
+
+`regress --db DB --experiment ID --baseline baseline` stores the comparison
+family and returns exit code 1 only when a regression is found. `validate` runs
+all baseline leave-one-launch-out A/A splits and reports false findings with
+counts. `power --out reports/power.json` reproduces the fake-server power curve.
+The committed synthetic curve observed 0/20, 9/20, 20/20, and 20/20 detections at
++2%, +5%, +10%, and +20%, respectively, with Wilson intervals in the artifact.
+This is one-metric simulated power, not measured GPU power. A +2% change is
+below the detector's fixed 5% decision threshold. The eager candidate's real
+regression behavior is **not run (needs GPU)**.
+
+M7 verification: `pytest -q` — **260 passed**; `ruff check .` passed. Live: not run (needs GPU).

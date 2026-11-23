@@ -155,3 +155,15 @@ class Store:
             ],
         )
         return result
+
+    def replace_regressions(self, experiment, rows):
+        with self.connection:
+            self.connection.execute(
+                "DELETE FROM regression_results WHERE experiment_id=?", (experiment,)
+            )
+            for row in rows:
+                values = {"id": uuid.uuid4().hex, "experiment_id": experiment, **row}
+                self.connection.execute(
+                    f"INSERT INTO regression_results ({','.join(values)}) VALUES ({','.join('?' for _ in values)})",
+                    tuple(values.values()),
+                )

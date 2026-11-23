@@ -25,10 +25,15 @@ def dispatch():
     run.add_argument("--vllm-bin", default="vllm")
     run.add_argument("--lm-eval-bin", default="lm_eval")
     run.add_argument("--quality-limit", type=int)
-    for name in ("resume", "status", "analyze"):
+    for name in ("resume", "status", "analyze", "regress", "validate"):
         command = commands.add_parser(name)
         command.add_argument("--db", required=True)
         command.add_argument("--experiment", required=True)
+        if name == "regress":
+            command.add_argument("--baseline", default="baseline")
+            command.add_argument("--min-effect-pct", type=float, default=5)
+    power = commands.add_parser("power")
+    power.add_argument("--out", required=True)
     probe = commands.add_parser("probe", help="load a variant or verify an optional factor")
     probe.add_argument("--model", required=True)
     probe.add_argument("--variant", required=True)
@@ -47,8 +52,10 @@ def dispatch():
         return probe_command(
             args.model, args.variant, args.port, args.vllm_bin, args.out, args.startup_timeout
         )
-    if args.command in ("resume", "status", "analyze"):
+    if args.command in ("resume", "status", "analyze", "regress", "validate"):
         return handlers.database_command(args)
+    if args.command == "power":
+        return handlers.power(args.out)
     return handlers.selftest()
 
 

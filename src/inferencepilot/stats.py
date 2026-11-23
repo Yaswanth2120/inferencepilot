@@ -232,3 +232,19 @@ def minimum_detectable_effect(
         alpha,
         power,
     )
+
+
+def bootstrap_effect_ci(baseline, candidate, confidence=0.95, resamples=10000, seed=0):
+    """Independently resample reps to bound percent change relative to the resampled baseline."""
+    a, b = _values(baseline), _values(candidate)
+    _probability(confidence, "confidence")
+    _count(resamples, "resamples")
+    if any(value <= 0 for value in a):
+        raise ValueError("percent effect bootstrap requires positive baseline observations")
+    rng = random.Random(seed)
+    effects = [
+        100 * (mean(rng.choices(b, k=len(b))) / mean(rng.choices(a, k=len(a))) - 1)
+        for _ in range(resamples)
+    ]
+    tail = (1 - confidence) * 50
+    return percentile(effects, tail), percentile(effects, 100 - tail)

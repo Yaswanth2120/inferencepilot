@@ -39,6 +39,14 @@ def create_app(settings=None):
     app.state.active = 0
     app.state.rng = random.Random(settings.seed)
 
+    @app.get("/fake/timing")
+    async def timing(seed: int = 0, prompt_tokens: int = 8, output_tokens: int = 4):
+        """Expose synthetic scheduler time for deterministic power experiments, not wall time."""
+        return {
+            "synthetic": True,
+            "seconds": sum(delays(settings, prompt_tokens, output_tokens, 1, seed)),
+        }
+
     @app.get("/health")
     async def health():
         if not settings.healthy:
