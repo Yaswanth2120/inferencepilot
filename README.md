@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M5 quality evaluation.**
+constraint-based recommendation. **Current stage: M6 persistent execution.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -41,7 +41,9 @@ not need those tools. It never loads a model or imports vLLM.
 - [x] M3 owned process groups, readiness, provisional resolved logs, safety checks, and load/factor probes.
 - [x] M4 benchmark argv snapshots, detailed-result parser, metric cross-checks, failure classification, and measured-capacity open-loop rates.
 - [x] M5 pinned quality command, paired sample statistics, and fake-server token agreement.
-- [ ] M6–M8 runner, detector, and reports.
+- [x] M6 SQLite store, checkpointed runner, interruption/resume, budget cap, and complete offline selftest.
+- [ ] M7 regression detector and validation.
+- [ ] M8 constraint-based recommendations and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
 No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
@@ -319,3 +321,17 @@ passing counts are recorded in the milestone PR. Real quality scores and harness
 execution: not run (needs GPU). No capability or quantization-quality result exists.
 
 M5 final verification: `pytest` passed 243 cases; `ruff check .` passed.
+
+## M6 persistent runner
+
+`run --plan plan.json --db data/experiment.db` now executes the stored schedule;
+`status`, `resume`, and `analyze` take `--db` and `--experiment ID`.
+Use `run --dry-run` first. `selftest` executes six fake server lifetimes, 120
+checkpointed reps, paired quality, token agreement, and an idempotent resume.
+Its outputs are synthetic and do not establish GPU compatibility or performance.
+Interrupted attempts keep their physical launch identity; completed reps are
+not replayed. Wall-clock budgets include time paused between attempts. A killed
+machine may leave a foreign server that requires owner cleanup before resuming.
+Live execution: **not run (needs GPU)**.
+
+M6 verification: `pytest -q` — **246 passed**; `ruff check .` passed. Live: not run (needs GPU).

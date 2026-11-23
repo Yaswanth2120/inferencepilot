@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from inferencepilot.fakes.fake_vllm import Settings, create_app, delays
+from inferencepilot.fakes.timing import Settings, delays
 from inferencepilot.vllm_flags import (
     BENCH_FLAGS,
     HELP_ALL_FLAG,
@@ -133,6 +133,8 @@ def bench(args):
 
 def serve(args):
     import uvicorn
+
+    from inferencepilot.fakes.fake_vllm import create_app
 
     if os.environ.get("INFERENCEPILOT_FAKE_CRASH") == "1":
         for index in range(int(os.environ.get("INFERENCEPILOT_FAKE_CRASH_LINES", "0"))):

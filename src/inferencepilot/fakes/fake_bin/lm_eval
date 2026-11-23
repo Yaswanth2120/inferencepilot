@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Synthetic harness fixture generator. Never a quality measurement."""
+import json
+import sys
+from pathlib import Path
+args = sys.argv[1:]
+limit = int(args[args.index('--limit') + 1]) if '--limit' in args else 1319
+out = Path(args[args.index('--output_path') + 1])
+out.mkdir(parents=True, exist_ok=True)
+rows = [dict(doc_id=i, doc_hash=f'fake-doc-{i}', prompt_hash=f'fake-prompt-{i}',
+             filter=kind, exact_match=int(i % 5 != 0))
+        for i in range(limit) for kind in ('strict-match', 'flexible-extract')]
+(out / 'samples_gsm8k_fake.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in rows))

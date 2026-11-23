@@ -916,3 +916,74 @@ compares returned token IDs. The nested check coroutine avoids an async test-plu
 `test_agreement_rejects_decoded_text_instead_of_ids` supplies an invalid response
 through MockTransport. Its nested handler and check coroutine ensure ambiguous
 decoded text cannot be accepted as token IDs.
+
+### M6 functions
+
+`src/inferencepilot/store.py:encode` — Serialize JSON deterministically while rejecting non-finite numbers. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:__init__` — Initialize the component and validate the resources it owns. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:close` — Release the SQLite connection. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:meta` — Read a version or execution checkpoint by its exact key. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:set_meta` — Commit a version or checkpoint independently by key. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:rows` — Read validated table columns using parameter-bound values. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:insert` — Persist a validated row and assign its unique identity. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:update` — Persist changes to one identified row using parameter-bound values. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:checkpoint_rep` — Commit a rep and its logical checkpoint in a single transaction. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:artifact` — Provide the artifact operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:create` — Persist the immutable plan, environment snapshot, and requested configurations. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/store.py:records` — Collect related experiment records through the store boundary. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:execute` — Bound a child command and reap its owned process group on interruption. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:__init__` — Initialize the component and validate the resources it owns. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:remaining` — Enforce the persisted wall-clock deadline before more work starts. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:run` — Execute or resume the stored randomized schedule under an exclusive database lock. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:launch` — Own one physical server lifetime and checkpoint its benchmark and quality work. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:point` — Invoke seeded benchmark reps and persist their raw artifacts and verified summaries. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/runner.py:check_quality` — Persist harness sample statistics and paired greedy token outputs. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/analysis.py:point_key` — Give closed and open points stable distinct comparison identities. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/analysis.py:observations` — Group comparable rep metrics by configuration, point, and physical launch. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/analysis.py:aggregate` — Compute mean-of-rep summaries with bootstrap intervals and replication counts. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/analysis.py:capacity` — Select measured baseline chat capacity with its contributing rep count. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/analysis.py:combined_spec` — Choose each observed OFAT level independently; validate interactions in its own launch. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/commands.py:run` — Execute or resume the stored randomized schedule under an exclusive database lock. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/commands.py:interrupt` — Convert SIGTERM into a cleanup-aware interruption. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/commands.py:database_command` — Dispatch database-oriented CLI operations outside argument parsing. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/commands.py:selftest` — Delegate offline validation to the fake package in a separate process. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/selftest.py:mini_plan` — Build a small seeded synthetic experiment on an available local port. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/selftest.py:fake_path` — Put explicitly fake binaries and the active Python environment on PATH. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/selftest.py:campaign` — Run and resume a synthetic campaign while checking complete rep counts. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/selftest.py:main` — Run the offline campaign and check its launch, quality, and agreement records. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/fakes/timing.py:delays` — Provide the delays operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+
+`cli.dispatch` wires argparse values to command handlers. `cli.main` turns configuration exceptions into a readable exit code 2, so CLI callers do not receive tracebacks for missing inputs.

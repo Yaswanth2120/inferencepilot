@@ -545,3 +545,13 @@ The 200 fixed arithmetic prompts are synthetic agreement probes. Divergence is
 zero-based, excludes exact matches, and uses the shorter length for strict
 prefixes. A no-divergence mean is absent, not fabricated zero.
 Live harness/vLLM paths: not run (needs GPU).
+
+### M6 — persistent execution and resume
+
+The owner explicitly requested sequential milestones through M8, overriding the usual one-milestone session limit. The section 11 DDL is copied verbatim, with schema version 1 in schema_meta; execution checkpoints also use schema_meta rather than changing the contract. A database lock excludes concurrent runners. A rep and its logical checkpoint commit atomically, so an interrupted slot starts a new physical server lifetime while completed logical reps remain attached to their original launches. SIGTERM/SIGINT clean up owned processes; SIGKILL cannot promise cleanup and foreign processes are never adopted or killed.
+
+The wall-clock cap starts at experiment creation and includes paused time; resume does not replenish it. Server startup failures are recorded and the schedule continues. The combined configuration chooses improved individual levels by maximum observed closed-loop chat output throughput and receives its own validation launch; equal scores keep the baseline level. The baseline's first measured closed-loop chat sweep fixes all open-loop arrival rates; these additional points were explicitly excluded from the original estimate. Quality is conservatively rerun for each physical completed launch, including scheduling-only configurations; failed evidence remains explicit and will disqualify a recommendation. Small quality subsets and fewer agreement prompts exist only in explicit synthetic selftests, never the default live run.
+
+The selftest command intentionally replaces the M0 stub with a full fake subprocess campaign; its original assertion was updated to the new success message. Fake benchmark timing was separated from FastAPI imports to avoid starting an HTTP framework for every synthetic benchmark. Analysis-owned regression/recommendation tables are initialized here and populated by M7/M8, rather than inserting placeholder conclusions in M6. No GPU or real vLLM was run.
+
+The pre-M6 CLI test expecting an unimplemented runner now checks the required database argument, preserving exit code 2 for configuration errors.
