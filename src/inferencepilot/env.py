@@ -6,11 +6,12 @@ import importlib.metadata
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
-from inferencepilot.vllm_flags import USED_FLAGS
+from inferencepilot.vllm_flags import HELP_ALL_FLAG, PINNED_VLLM_VERSION, USED_FLAGS, VERSION_FLAG
 
 
 def command_output(argv):
@@ -107,19 +108,30 @@ def snapshot():
     }
 
 
+def check_flags(binary):
+    for command, flags in USED_FLAGS.items():
+        result = command_output([binary, *command.split(), HELP_ALL_FLAG])
+        if not result["available"]:
+            return [f"cannot inspect {command}: {result['error']}"]
+        present = set(re.findall(r"(?<![\w-])--[a-z][a-z0-9-]*", result["output"]))
+        missing = sorted(set(flags) - present)
+        if missing:
+            return [f"missing {command} flag: {flag}" for flag in missing]
+    return []
+
+
 def doctor(vllm_bin):
     checks = []
     binary = shutil.which(vllm_bin)
     if binary is None:
         checks.append("vllm not found")
     else:
-        for command, flags in USED_FLAGS.items():
-            help_result = command_output([binary, *command.split(), "--help"])
-            if not help_result["available"]:
-                checks.append(f"cannot inspect {command}: {help_result['error']}")
-            else:
-                missing = [flag for flag in flags if flag not in help_result["output"].split()]
-                checks.extend(f"missing {command} flag: {flag}" for flag in missing)
+        version = command_output([binary, VERSION_FLAG])
+        if not version["available"]:
+            checks.append("cannot read vllm version")
+        elif PINNED_VLLM_VERSION not in version["output"].split():
+            checks.append(f"expected vllm {PINNED_VLLM_VERSION}; got {version['output']}")
+        checks.extend(check_flags(binary))
     environment = snapshot()
     if not environment["gpu"]["available"]:
         checks.append("nvidia-smi unavailable or failed")
@@ -130,7 +142,7 @@ def doctor(vllm_bin):
             {
                 "environment": environment,
                 "errors": checks,
-                "flag_check": "no production flags in use yet (M1 pending)",
+                "flag_check": {"version": PINNED_VLLM_VERSION, "commands": list(USED_FLAGS)},
             },
             indent=2,
         )
