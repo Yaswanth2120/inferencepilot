@@ -151,3 +151,134 @@ nonfinite/nonpositive overrides; actual wall-clock budget enforcement is M6.
 The example keeps workloads and calibration in one YAML document so the
 validated experiment is self-contained. Separate workload-file composition is
 not required for M1 and no second source of truth is introduced.
+
+## M2 — numeric API and descriptive definitions
+
+Stats functions are pure and accept finite scalar real observations. Reject
+booleans, strings, NaNs/infinities, empty data, invalid counts/probabilities,
+and insufficient data instead of silently dropping or coercing observations.
+Use math.fsum for sums, sample SD (n-1), and dimensionless CV=SD/abs(mean).
+A zero-mean CV or percent MDE is undefined and raises ValueError.
+Percentile p is in [0,100]: after sorting, h=(n-1)*p/100, i=floor(h), j=ceil(h),
+w=h-i, result=(1-w)*x[i]+w*x[j]. This is the default linear/type-7 definition
+in [NumPy's documentation](https://numpy.org/doc/stable/reference/generated/numpy.percentile.html).
+The implementation uses a convex weighted sum to avoid overflowing x[j]-x[i]
+for large opposite-sign finite endpoints. Tests use hand calculations, not NumPy.
+
+## M2 — bootstrap and permutation conventions
+
+Bootstrap CI estimates the mean of scalar rep-level statistics. Draw n reps
+with replacement for each of 10,000 resamples, using a private seeded RNG;
+take the two percentile endpoints at (1-confidence)/2 and its complement.
+At least two reps are needed. This resamples neither raw request latencies
+nor launches; the between-launch noise is accounted for separately by MDE.
+It assumes rep-level exchangeability. Actual clustered-data calibration must
+be assessed in M7, so do not claim guaranteed coverage or power from M2 tests.
+
+Permutation statistic is absolute difference of sample means (two-sided).
+Enumerate distinct assignments of labeled pooled positions to the original
+sample sizes if C(N,n_baseline)<=20,000; repeated numeric values still occupy
+different positions. Exact p is the fraction with distance >= observed.
+For larger problems, uniformly sample 100,000 assignments with replacement
+and use p=(extreme+1)/(draws+1), preventing a simulated zero p-value. This
+conservative convention is described in the [SciPy permutation documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html).
+Our two-sided absolute-distance rule is explicit and is not necessarily the
+same as doubling a one-sided tail for asymmetric unequal-size samples.
+
+Center pooled data before the permutation sums to reduce offset cancellation.
+Treat floating-point distances as tied at relative tolerance 1e-12 and zero
+absolute tolerance so tiny measurement units do not turn distinct values into
+ties. The result records method, assignments evaluated, possible assignments,
+and Monte Carlo seed. Optional counts/limit parameters support explicit
+experiments/tests; specified production defaults remain 20k/100k.
+No function changes the caller's data or global random state.
+
+## M2 — Holm and paired proportions
+
+Holm sorts m p-values, multiplies the smallest by m, the next by m-1, and so on,
+takes the running maximum, clips at 1, and restores original order. Empty
+families return an empty list. Correction scope remains all tests in one
+candidate-versus-baseline comparison, as specified for M7.
+
+Wilson uses the two-sided score interval without continuity correction with
+z=Phi^-1((1+confidence)/2): center=(p+z^2/(2n))/(1+z^2/n),
+radius=z*sqrt(p(1-p)/n+z^2/(4n^2))/(1+z^2/n). Clamp roundoff to [0,1].
+This matches the score method described by [NIST](https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm).
+Require integer 0<=successes<=n and n>=1.
+
+Exact McNemar takes only the two discordant counts b and c. Under the null,
+B~Binomial(b+c,1/2); p=min(1,2*sum_{k=0}^{min(b,c)} C(b+c,k)/2^(b+c)).
+With no discordances, return 1. Concordant cells do not contribute. Use
+integer combinations and a single final ratio, avoiding early exponential
+underflow. This is the exact-binomial convention in [statsmodels](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html),
+not the asymptotic or mid-p variant. Those libraries are references only;
+neither is a dependency or imported by the implementation/tests.
+
+## M2 — MDE derivation and assumptions
+
+Model baseline rep j of independent launch i as y_ij=mu+u_i+e_ij, with
+Var(u_i)=tau^2, Var(e_ij)=sigma^2, and independent zero-mean launch/rep effects.
+The estimated candidate shares these variance components; with only one
+candidate launch we cannot independently estimate its between-launch variance.
+Require at least two baseline launches and two reps in each. Unbalanced
+baseline counts are supported because interrupted/partial runs may leave them.
+
+For K baseline launches with sizes n_i, N=sum(n_i), launch means m_i and
+rep-weighted mean mu_hat=sum(n_i*m_i)/N:
+
+- MS_within=sum_i sum_j (y_ij-m_i)^2/(N-K).
+- MS_between=sum_i n_i*(m_i-mu_hat)^2/(K-1).
+- n0=(N-sum_i n_i^2/N)/(K-1).
+- sigma_hat^2=MS_within.
+- tau_hat^2=max(0,(MS_between-MS_within)/n0).
+
+These are the one-way random-effect method-of-moments components documented
+by [NIST](https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/onewayan.htm).
+The nonnegative truncation avoids a negative estimated noise variance; it
+does not prove launch effects are absent. If every observation is constant,
+both components and plug-in MDE are zero, a property of this estimator.
+
+A baseline grand mean weights launch i by w_i=n_i/N, so
+Var(baseline_mean)=tau^2*sum_i w_i^2+sigma^2/N.
+For C independent candidate launches with R reps each,
+Var(candidate_mean)=tau^2/C+sigma^2/(C*R).
+Independent baseline and candidate noise therefore give:
+
+V=tau_hat^2*(sum_i w_i^2+1/C)+sigma_hat^2*(1/N+1/(C*R)).
+
+For the planned K=3 equal launches of 5 reps and C=1,R=5,
+V=(4/3)*tau_hat^2+(4/15)*sigma_hat^2. Crucially, increasing candidate reps
+does not remove its one-launch noise term tau_hat^2.
+
+With approximately normal mean difference and known plug-in standard error
+SE=sqrt(V), a two-sided alpha test uses z_(1-alpha/2)*SE. A worse-direction
+mean shift delta has approximately power Phi(delta/SE-z_(1-alpha/2)), ignoring
+the negligible opposite tail at the design point. Solving for target power
+q gives delta=(z_(1-alpha/2)+z_q)*SE. Report
+MDE_pct=100*delta/abs(mu_hat), with alpha=.05 and power=.80 by default.
+Their quantile sum is 1.959963984540054+.841621233572914=2.801585218112968.
+Power must be >.5 for this one-tail-dominant planning approximation.
+
+This is a nominal unadjusted-alpha planning estimate, not an exact finite-sample
+power result for the later permutation/Holm detector. Three launches give an
+uncertain variance estimate; normality, independence, shared baseline/candidate
+variance, and ignoring the second tail are assumptions. M7 must measure false
+positives and power with launch noise and multiple testing, and report any
+failure honestly. Never interpret this plug-in formula as validated detector power.
+
+Worked balanced example: launches [8,10],[10,12],[12,14] have mean 11,
+MS_within=2, MS_between=8, n0=2, tau_hat^2=3. With C=1,R=2,
+V=3*(1/3+1)+2*(1/6+1/2)=16/3, giving
+MDE_pct=100*2.801585218112968*sqrt(16/3)/11.
+The tests also derive an unbalanced example (sizes 2,3,2) by hand.
+The result carries all components, counts, alpha, and target power for auditing.
+
+## M2 — branch dependency and CI
+
+M1 remains an open PR; one cancelled duplicate PR check was rerun rather than
+bypassing protection or asserting it passed. Fast-forward reserved M2 to the
+M1 head, then propose M2 as a stacked PR targeting the M1 branch. Broaden the
+CI pull_request trigger to every base branch so a stacked PR gets the same
+six OS/Python checks. Keep the existing tests and protections unchanged.
+The duplicate push/PR workflow behavior predates M2 and is not otherwise
+redesigned here. No earlier milestone implementation is changed in M2.

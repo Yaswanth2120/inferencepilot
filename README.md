@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M1 configuration and experiment planning.**
+constraint-based recommendation. **Current stage: M2 pure-Python statistics.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -37,7 +37,8 @@ not need those tools. It never loads a model or imports vLLM.
 - [x] M0 setup passed all six macOS/Linux and Python 3.10–3.12 CI jobs.
 - [x] M1 deterministic OFAT plans, baseline placement, calibration estimate, and dry-run.
 - [x] M1 configuration validation and missing-flag checks against fake full help.
-- [ ] M2–M8 statistics, adapters, runner, quality, detector, and reports.
+- [x] M2 descriptive statistics, seeded bootstrap/permutation tests, Holm, Wilson, McNemar, and MDE.
+- [ ] M3–M8 server management, adapters, runner, quality, detector, and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
 No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
@@ -152,3 +153,36 @@ plan + run --dry-run    -> 12 launches, 8 points each, 5.9067 illustrative GPU h
 ```
 
 M1 live paths: not run (needs GPU).
+
+
+## M2 statistics
+
+`inferencepilot.stats` uses only the Python standard library. Percentiles follow
+linear/type-7 interpolation: sort x, set h=(n-1)*p/100, and interpolate between
+the observations at floor(h) and ceil(h). SD uses the sample denominator n-1;
+CV is a dimensionless SD/abs(mean), undefined at a zero mean.
+
+Bootstrap intervals resample scalar **rep-level** statistics, not individual
+requests: 10,000 resamples and a local seed by default. Two-sample permutation
+tests use absolute mean difference and enumerate up to 20,000 label assignments;
+larger problems use 100,000 seeded assignments with a conservative +1 correction.
+Holm adjustment preserves the input test order. Wilson intervals use the score
+formula, and McNemar uses the exact two-sided binomial discordance test.
+
+MDE estimates separate between-launch and within-launch variance. With the
+three-baseline/one-candidate design, candidate launch noise stays in the standard
+error even if many reps are collected within that launch. It is a **normal
+planning approximation**, not a guaranteed power claim; M7 validates actual
+false-positive rate and power. See DECISIONS.md for the full derivation,
+assumptions, edge cases, and worked arithmetic. No GPU rental is needed.
+
+M2 local verification (macOS, Python 3.12.9):
+
+```text
+pytest                  -> 130 passed in 3.70s (67 new cases)
+ruff check .            -> All checks passed!
+inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
+```
+
+The no-NumPy import check scans every Python module under src. Detector power
+validation is still M7. Live paths: not run (needs GPU).
