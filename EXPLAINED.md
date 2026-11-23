@@ -983,7 +983,7 @@ decoded text cannot be accepted as token IDs.
 
 `src/inferencepilot/fakes/selftest.py:main` — Run the offline campaign and check its launch, quality, and agreement records. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
 
-`src/inferencepilot/fakes/timing.py:delays` — Provide the delays operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/fakes/timing.py:delays` — Generate seeded synthetic prefill and per-token delays with concurrency scaling and optional slowdown. Returning a schedule keeps the fake benchmark independent of host sleep noise.
 
 
 `cli.dispatch` wires argparse values to command handlers. `cli.main` turns configuration exceptions into a readable exit code 2, so CLI callers do not receive tracebacks for missing inputs.
@@ -994,17 +994,17 @@ decoded text cannot be accepted as token IDs.
 
 `src/inferencepilot/regress.py:compare_family` — Apply Holm once across every available point and metric for one candidate. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
 
-`src/inferencepilot/regress.py:cases_for` — Provide the cases for operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/regress.py:cases_for` — Align baseline and candidate groups by workload, load point and metric, preserving physical launch groups. Missing arms remain in the test family so incomplete evidence cannot quietly reduce the correction.
 
-`src/inferencepilot/regress.py:compare_experiment` — Provide the compare experiment operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/regress.py:compare_experiment` — Compare each candidate with the requested baseline through the same family detector. Configuration identities remain attached to every row for transactional persistence and role-aware reporting.
 
-`src/inferencepilot/regress.py:summary` — Provide the summary operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/regress.py:summary` — Count per-point verdicts and select the worst verdict in the documented order. Empty evidence is inconclusive rather than an automatic success.
 
 `src/inferencepilot/regress.py:validate` — Leave out every physical baseline launch once; count both false directional findings. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
 
-`src/inferencepilot/fakes/power.py:simulated_launch` — Provide the simulated launch operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/fakes/power.py:simulated_launch` — Collect five seeded synthetic timing observations over the fake HTTP endpoint with a shared launch effect. Separate seeds for launch drift and rep jitter exercise both sources of variation.
 
-`src/inferencepilot/fakes/power.py:curve` — Provide the curve operation for this module. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+`src/inferencepilot/fakes/power.py:curve` — Repeat independent simulated campaigns at the four specified latency injections and run the unchanged detector. Count-backed detection rates and Wilson intervals report observed power without claiming real hardware performance.
 
 `src/inferencepilot/fakes/power.py:main` — Run the offline campaign and check its launch, quality, and agreement records. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
 
@@ -1016,3 +1016,36 @@ decoded text cannot be accepted as token IDs.
 `commands.power` launches the explicitly fake power tool in a separate process. This keeps fake code outside production library imports.
 
 `fake_vllm.timing` exposes only the fake scheduler's synthetic timing over HTTP. This makes repeated power experiments deterministic without pretending that host sleep timing measures GPU latency.
+
+### M8 functions
+
+`src/inferencepilot/recommend.py:dominates` — Compare throughput, E2E and quality using weak inequalities and require at least one strict improvement. Equal candidates therefore remain together in the Pareto set.
+
+`src/inferencepilot/recommend.py:recommend` — Reject each candidate with specific evidence gaps or measured constraint excesses, then rank survivors by the declared objective. It accepts precomputed statistics so constraint decisions cannot change the underlying measurements.
+
+`src/inferencepilot/recommend.py:valid` — Validate the objective point, supported latency metrics and quality filter before evaluating candidates. Rejecting ambiguous constraints prevents silently optimizing the wrong measurement.
+
+`src/inferencepilot/report.py:prepare` — Collect stored records, compute shared aggregate/comparison evidence, run A/A validation and persist a recommendation. The returned bundle is the single numerical source for both report formats and plots.
+
+`src/inferencepilot/report.py:number` — Refuse measurement formatting without an explicit positive observation count. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/report.py:markdown` — Render environment, requested/resolved settings, counted metrics, quality, comparisons and decisions as Markdown. Count-aware measurement formatting prevents isolated rates or percentiles from appearing without their sample size.
+
+`src/inferencepilot/report.py:plots` — Optionally draw count-labelled throughput and p95 E2E evidence using matplotlib. Keeping this operation here makes ownership explicit and lets offline tests verify its behavior.
+
+`src/inferencepilot/report.py:write` — Validate and write one evidence bundle to Markdown, JSON and optional plots. Rendering first prevents incomplete statistical output from being saved as an apparently finished report.
+
+`src/inferencepilot/fakes/demo.py:main` — Run a fresh synthetic campaign and save its complete decision/report bundle under explicit output paths. It refuses a reused database to keep the demonstration evidence unambiguous.
+
+`scripts/calibrate.py:calibrate` — Measure one baseline benchmark rep per configured point and retain raw results, startup and teardown durations. It writes a separate measured configuration so the illustrative calibration is never silently overwritten.
+
+`scripts/calibrate.py:main` — Parse the owner-run calibration arguments and install a cleanup-aware SIGTERM handler. The helper must be invoked explicitly on the GPU host, while offline tests use fake binaries.
+
+
+`analysis.recommendation_inputs` joins the stored config, resolved launch, paired quality and comparison evidence to shared aggregates. It passes uncertainty through to the recommender without computing another version of the statistics.
+
+`fakes.selftest.synthetic_constraints` sets a generous SLO at the fake plan's only closed-loop point. It permits testing the whole decision/report path without implying that those limits describe real hardware.
+
+The campaign wrapper defaults to a dry run and checks measured calibration and probe evidence before invoking the real CLI. The sync wrapper makes an integrity-checked SQLite backup first, then copies raw artifacts without deleting destination data, so active WAL writes are not lost.
+
+`Runner.collect_agreement` wraps the HTTP agreement coroutine in the remaining experiment deadline and preserves the config seed. Cancellation closes the client before server teardown, so a slow quality pass cannot keep starting requests after the campaign budget is exhausted.

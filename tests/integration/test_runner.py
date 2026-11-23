@@ -133,3 +133,30 @@ def test_budget_and_server_failure(tmp_path, monkeypatch):
     assert len(records["launches"]) == 6
     assert all(row["status"] == "server_failed" for row in records["launches"])
     store.close()
+
+
+def test_resume_completed_after_deadline(tmp_path):
+    store = Store(tmp_path / "completed.db")
+    identity = store.create(mini_plan(), {"synthetic": True}, 1)
+    store.update("experiments", identity, status="completed", created_at=0)
+    assert Runner(store).run(experiment=identity) == identity
+    assert store.rows("experiments", id=identity)[0]["status"] == "completed"
+    store.close()
+
+
+def test_agreement_is_cancelled_at_budget(tmp_path, monkeypatch):
+    import asyncio
+
+    from inferencepilot import quality
+    from inferencepilot.config import ConfigSpec
+
+    async def hanging(*args, **kwargs):
+        await asyncio.sleep(60)
+
+    monkeypatch.setattr(quality, "agreement_check", hanging)
+    store = Store(tmp_path / "deadline.db")
+    runner = Runner(store)
+    runner.deadline = time.time() + 0.02
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(runner.collect_agreement(ConfigSpec(), None))
+    store.close()

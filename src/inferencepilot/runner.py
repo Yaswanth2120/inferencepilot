@@ -9,10 +9,10 @@ import os
 import signal
 import subprocess
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 
 from inferencepilot import analysis, env, quality
-from inferencepilot.config import ConfigSpec, ExperimentPlan, LoadSpec
+from inferencepilot.config import ConfigSpec, ExperimentPlan, LoadSpec, SLOSpec
 from inferencepilot.loadgen import build_command, parse_result
 from inferencepilot.metrics import summarize
 from inferencepilot.server import ServerManager, ServerTimeouts
@@ -26,6 +26,7 @@ class Options:
     quality_limit: int | None = None
     agreement_count: int = 200
     agreement_tokens: int = 64
+    slos: dict = field(default_factory=dict)
     timeouts: ServerTimeouts = field(default_factory=ServerTimeouts)
 
 
@@ -77,6 +78,8 @@ class Runner:
                     encode({k: v for k, v in asdict(self.options).items() if k != "timeouts"}),
                 )
             row = self.store.rows("experiments", id=experiment)[0]
+            if row["status"] == "completed":
+                return experiment
             plan = ExperimentPlan.model_validate_json(row["plan"])
             self.deadline = row["created_at"] + row["budget_gpu_hours"] * 3600
             self.store.update("experiments", experiment, status="running", abort_reason=None)
@@ -120,7 +123,10 @@ class Runner:
         manager = ServerManager(
             binary=self.options.binary,
             log_dir=self.store.path.parent / "logs",
-            timeouts=self.options.timeouts,
+            timeouts=replace(
+                self.options.timeouts,
+                readiness=min(self.options.timeouts.readiness, self.remaining()),
+            ),
         )
         ordinal = len(self.store.rows("launches", config_id=config["id"])) + 1
         launch_id = self.store.insert(
@@ -215,10 +221,14 @@ class Runner:
             started = time.time()
             before = env.gpu_memory_used()
             try:
-                command = build_command(spec, workload, load, seed, raw, binary=self.options.binary)
+                thresholds = self.options.slos.get(workload.name)
+                slo = SLOSpec.model_validate(thresholds) if thresholds else None
+                command = build_command(
+                    spec, workload, load, seed, raw, binary=self.options.binary, slo=slo
+                )
                 execute(command, raw.with_suffix(".log"), timeout)
                 parsed = parse_result(json.loads(raw.read_text()))
-                summary = summarize(parsed, workload.output_tokens)
+                summary = summarize(parsed, workload.output_tokens, slo=slo)
                 values = dict(
                     status=summary.status,
                     completed=summary.completed,
@@ -291,15 +301,7 @@ class Runner:
         reference = self.store.meta(reference_key)
         try:
             previous = json.loads(reference) if reference else None
-            outputs, compared = asyncio.run(
-                quality.agreement_check(
-                    f"http://127.0.0.1:{spec.port}",
-                    spec.model,
-                    reference_outputs=previous["outputs"] if previous else None,
-                    prompts=quality.fixed_prompts()[: self.options.agreement_count],
-                    max_tokens=self.options.agreement_tokens,
-                )
-            )
+            outputs, compared = asyncio.run(self.collect_agreement(spec, previous))
             path = self.store.artifact(launch_id + "-agreement.json")
             path.write_text(encode(outputs))
             if previous:
@@ -316,6 +318,8 @@ class Runner:
                 self.store.set_meta(
                     reference_key, encode({"outputs": outputs, "launch_id": launch_id})
                 )
+        except asyncio.TimeoutError as error:
+            raise TimeoutError("wall-clock GPU-hour budget exhausted during agreement") from error
         except Exception as error:
             # HTTP and schema errors must remain visible without fabricating agreement.
             self.store.insert(
@@ -326,3 +330,18 @@ class Runner:
                 metrics=encode({"status": "failed", "error": str(error)}),
                 created_at=time.time(),
             )
+
+    async def collect_agreement(self, spec, previous):
+        """Cancel agreement HTTP work at the persisted campaign deadline."""
+        timeout = self.remaining()
+        return await asyncio.wait_for(
+            quality.agreement_check(
+                f"http://127.0.0.1:{spec.port}",
+                spec.model,
+                reference_outputs=previous["outputs"] if previous else None,
+                prompts=quality.fixed_prompts()[: self.options.agreement_count],
+                max_tokens=self.options.agreement_tokens,
+                seed=spec.seed,
+            ),
+            timeout=timeout,
+        )

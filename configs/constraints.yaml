@@ -1,0 +1,18 @@
+# Latency limits apply to the mean of rep p95 estimates (ms), with CI reported.
+points:
+  chat:closed:32:
+    p95_ttft: 500
+    p95_e2e: 15000
+quality:
+  filter: flexible-extract
+  max_drop_pp: 1.0
+  min_mcnemar_p: 0.05
+objective:
+  point: chat:closed:32
+  metric: output_throughput
+# Optional per-request goodput thresholds; apply to every chat point when passed to run.
+request_slos:
+  chat:
+    ttft_ms: 500
+    tpot_ms: 100
+    e2e_ms: 15000

@@ -1,351 +1,180 @@
 # InferencePilot
 
-InferencePilot is being built to compare tested vLLM serving configurations with
-replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M7 regression detection.**
-There are no live benchmark results yet.
+Compare **tested** vLLM serving configurations using replicated server launches,
+rep-level statistics, paired quality checks, and constraint-based recommendations.
+**M0–M8 are implemented and verified offline. Real GPU results: not run (needs GPU).**
+MIT licensed. Python 3.10–3.12. vLLM is invoked as a subprocess, never imported.
 
-## Quickstart (no GPU)
-
-Use Python 3.10–3.12. From the repository root:
+## Quickstart without a GPU
 
 ```sh
 python3.12 -m venv venv
 source venv/bin/activate
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,report]'
 pytest
 ruff check .
 inferencepilot selftest
-inferencepilot doctor
 ```
 
-`selftest` currently checks CLI wiring only and says the full pipeline is pending
-M6. The pytest suite exercises the actual fake HTTP server and subprocess.
-`doctor` prints a JSON environment snapshot and exits 3 when vLLM, NVIDIA tools,
-or lm-eval are absent. This is expected on a development Mac; offline tests do
-not need those tools. It never loads a model or imports vLLM.
+The report extra is optional; without it, Markdown/JSON still work and plots are
+omitted. The selftest runs six fake server lifetimes, 120 benchmark reps, quality,
+agreement, an idempotent resume, regression/A/A analysis, recommendation, and report.
+Tests additionally interrupt a real runner subprocess with SIGTERM and resume it,
+checking saved rep identities, seeds, physical launch ownership, and no duplicates.
+`doctor` is expected to exit 3 on a development Mac without NVIDIA/vLLM/lm-eval.
+Use `venv/` here: this workspace hides `.venv` files and skips editable `.pth` setup.
 
 ## Status
 
-- [x] Editable install verified on macOS, Python 3.12.9.
-- [x] Offline tests: streaming text/chat, seeded jitter, applied slowdown,
-  prefill/concurrency scaling, failures/hangs, and fake benchmark JSON.
-- [x] Fake executable launches over PATH, exposes health/models, prints
-  provisional resolved configuration, and cleans up its child after SIGTERM.
-- [x] Doctor handles unavailable tools and captures a best-effort snapshot.
-- [x] Ruff check and the explicitly limited M0 selftest run locally.
-- [x] M0 setup passed all six macOS/Linux and Python 3.10–3.12 CI jobs.
-- [x] M1 deterministic OFAT plans, baseline placement, calibration estimate, and dry-run.
-- [x] M1 configuration validation and missing-flag checks against fake full help.
-- [x] M2 descriptive statistics, seeded bootstrap/permutation tests, Holm, Wilson, McNemar, and MDE.
-- [x] M3 owned process groups, readiness, provisional resolved logs, safety checks, and load/factor probes.
-- [x] M4 benchmark argv snapshots, detailed-result parser, metric cross-checks, failure classification, and measured-capacity open-loop rates.
-- [x] M5 pinned quality command, paired sample statistics, and fake-server token agreement.
-- [x] M6 SQLite store, checkpointed runner, interruption/resume, budget cap, and complete offline selftest.
-- [x] M7 regression detector, A/A validation, and reproducible synthetic power curve.
-- [ ] M8 constraint-based recommendations and reports.
-- [ ] M9 live campaign: **not run (needs GPU)**.
+- [x] M0 package, environment inspection, fake HTTP server and executable, offline CI.
+- [x] M1 validated configurations, deterministic randomized OFAT plan and budget estimates.
+- [x] M2 pure Python bootstrap/permutation statistics, Holm, Wilson, McNemar, launch-aware MDE.
+- [x] M3 owned server groups, readiness, teardown, probes and provisional resolved settings.
+- [x] M4 benchmark argv/parser, raw-derived metrics, cross-checks and partial-rep exclusion.
+- [x] M5 pinned harness command, paired quality and greedy generated-token agreement.
+- [x] M6 exact SQLite schema, WAL checkpoints, interrupt/resume and wall-clock cap.
+- [x] M7 regression verdicts, count-backed A/A and reproducible synthetic power study.
+- [x] M8 constraint filtering, Pareto/ranking, persisted Markdown/JSON reports and plots.
+- [x] M9 handoff scripts/runbook prepared and tested **offline**.
+- [ ] M9 owner-run Qwen3 live campaign and replacement of provisional fixtures.
+- [ ] M10 optional GPT-OSS serving validation, gated on M9.
+- [ ] M11 final release documentation and v0.1.0 release.
 
-No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
-AGENTS.md specifies the owner-driven A100 campaign.
+Latest local verification and milestone counts are recorded below. GitHub requires
+six macOS/Linux × Python 3.10/3.11/3.12 checks before squash-merging each milestone PR.
 
-## Offline fake tools
+## Synthetic results and reproduction
 
-The executable is isolated from the normal PATH. With the virtualenv activated:
+[Demonstration report](reports/offline-demo/report.md) ·
+[Machine-readable evidence](reports/offline-demo/report.json) ·
+[Detector power study](reports/power.json)
 
 ```sh
-export PATH="$PWD/src/inferencepilot/fakes/fake_bin:$PATH"
-vllm serve fake-model --port 8000 --seed 7
-# In another activated terminal with the same fake PATH:
-vllm bench serve --num-prompts 3 --save-result --save-detailed \
-  --result-dir data/raw --result-filename fake.json
+# Use a fresh data directory; this explicitly invokes fake tooling.
+python -m inferencepilot.fakes.demo --data data/my-demo --out reports/my-demo
+inferencepilot power --out reports/power.json
 ```
 
-The fake bench emits deterministic synthetic JSON; it does not send load to the
-server and must never be treated as performance evidence. Interface and fixtures
-are provisional until checked against owner-provided real output in M9.
-Server controls use `INFERENCEPILOT_FAKE_` plus uppercase setting names:
-`TOKEN_DELAY`, `PREFILL_PER_TOKEN`, `CONCURRENCY_SLOWDOWN`, `JITTER`,
-`INJECT_SLOWDOWN_PCT`, `FAILURE_RATE`, `HANG_RATE`, and `HANG_SECONDS`.
-Set `INFERENCEPILOT_FAKE_CRASH=1` to simulate startup failure. Tokenization is
-whitespace-based and output tokens are deterministic strings, not model output.
+The fake benchmark generates seeded timing JSON; it does not generate HTTP load.
+The agreement check uses the actual fake HTTP endpoint. Fake quality is fabricated
+correctness data and never evidence about Qwen capability. The timing power study
+uses an ASGI endpoint exposing simulated scheduler time, excluding OS sleep noise.
 
-## Prior art and scope
+| Injected synthetic latency | Regression detections | Trials |
+|---|---:|---:|
+| +2% | 0 | 20 |
+| +5% | 9 | 20 |
+| +10% | 20 | 20 |
+| +20% | 20 | 20 |
 
-vLLM 0.15.1 already provides [parameter sweeps](https://docs.vllm.ai/en/v0.15.1/benchmarking/sweeps/),
-server startup, repeated runs, resume, SLA tuning, and visualization. Those are
-not claimed as novel. InferencePilot's intended focus is replicated launch
-placement, statistical comparisons with MDE and multiple-test correction,
-count-backed detector validation, paired quality checks, and recommendations
-with uncertainty. M1 implements planning; the statistical features come later.
-See [versioned compatibility notes](docs/VLLM_COMPATIBILITY.md) for sources and
-remaining live verification.
-No web UI, cloud rental orchestration, multi-GPU serving, or other engines are
-planned. Synthetic workloads and fake measurements cannot establish real
-latency, quality, quantization compatibility, or speedups. Real results will be
-limited to the pinned software, model, GPU, workload, and measured noise floor.
+Wilson intervals and fixed settings/seeds are in the power artifact. This is a
+one-metric simulated family, not GPU power under all corrected workload metrics.
+A 2% effect is below the fixed 5% decision threshold; an injected 5% effect crosses
+that boundary only in some noisy trials. No thresholds were tuned to these results.
 
-See AGENTS.md for the master specification, DECISIONS.md for choices,
-EXPLAINED.md for function explanations, and docs/ for current design/runbook
-status. `make campaign` and `make report` fail explicitly until implemented.
-
-## Local environment note
-
-This workspace marked files inside `.venv` as hidden on macOS. Python then
-skipped the editable-install `.pth` file. A normally named `venv/` avoids this
-local issue; no import-path workaround was added to the package or tests.
-Git is now initialized; the snapshot records the current commit when available.
-
-## Recorded M0 verification
-
-Local macOS / Python 3.12.9 run:
-
-```text
-python -m pip install -e '.[dev]'  -> Successfully installed inferencepilot-0.0.1
-pytest                          -> 17 passed in 1.90s
-ruff check .                    -> All checks passed!
-inferencepilot selftest         -> M0 CLI wiring OK; full pipeline pending M6
-inferencepilot doctor           -> exit 3; missing vLLM/NVIDIA/lm-eval reported
-```
-
-The subsequent M0 setup passed [all six CI jobs](https://github.com/Yaswanth2120/inferencepilot/actions/runs/45218908132).
-Live paths: not run (needs GPU).
-
-
-## M1 planning quickstart
-
-With the virtualenv activated:
+## Experiment commands
 
 ```sh
-mkdir -p data
 inferencepilot plan --config configs/experiment_qwen3_8b.yaml --out data/plan.json
-inferencepilot run --plan data/plan.json --db data/demo.db --dry-run
+inferencepilot run --plan data/plan.json --dry-run
+# On the prepared GPU host only, after probes and measured calibration:
+inferencepilot run --plan data/plan.json --db data/campaign.db --constraints configs/constraints.yaml
+inferencepilot status --db data/campaign.db --experiment ID
+inferencepilot resume --db data/campaign.db --experiment ID
+inferencepilot analyze --db data/campaign.db --experiment ID
+inferencepilot validate --db data/campaign.db --experiment ID
+inferencepilot regress --db data/campaign.db --experiment ID --baseline baseline
+inferencepilot recommend --db data/campaign.db --experiment ID --constraints configs/constraints.yaml
+inferencepilot report --db data/campaign.db --experiment ID --out reports/campaign
 ```
 
-The example plans 12 launches: three baselines, seven OFAT candidates, one
-unresolved combined candidate, and one seeded eager regression. Baselines occupy
-indices 0, floor(total/2), and total-1. The same input and seed produce byte-identical
-JSON, and each point contains five stored rep seeds. Requested flags remain
-requests until the server's resolved configuration is captured.
+The committed experiment uses **synthetic calibration**. The owner must measure it
+on the rental host; the campaign wrapper refuses synthetic calibration and pending
+probes. `--max-gpu-hours` sets a positive wall-clock cap at experiment creation.
+It includes paused time; resume does not reset it. Open-loop chat loads are fixed
+at 50/80/95% of the first baseline's measured closed-loop capacity. The original
+closed-loop estimate excludes open-loop duration; reserve additional time for it,
+quality, startup variation, and downloads.
 
-The illustrative estimate is 5.9067 GPU hours from **synthetic calibration**;
-it is not a measured campaign duration. It includes warmup estimates, startup,
-teardown, and a 600-second extra reserve. Open-loop runtime is excluded until
-baseline capacity is measured; allocate additional budget then. The budget flag
-in M1 previews the cap; enforcement and actual execution arrive in M6.
+Completed reps commit atomically with their logical checkpoints. An interrupted
+slot restarts with a new physical server lifetime while preserving previous reps.
+SIGTERM/SIGINT clean up owned groups; SIGKILL/machine loss cannot guarantee that.
+Foreign surviving servers are never adopted or killed. Failed startups are stored
+and scheduling continues; `completed` means the schedule was exhausted, not that
+every launch succeeded. SQLite schema mismatches fail explicitly. Benchmark raw
+artifacts and logs live next to the DB under `raw/` and `logs/`.
 
-The interface target is pinned to vLLM 0.15.1. `doctor --vllm-bin PATH` checks its
-version and all currently used serve flags against full help. Real hardware
-compatibility and flag effectiveness are unverified: not run (needs GPU).
+`regress` exits 1 if any regression is found; 0 otherwise. Configuration errors exit
+2, doctor/environment failures exit 3. Missing or noisy evidence produces explicit
+inconclusive findings. The recommender requires five comparable reps for SLO/objective
+metrics, paired quality with drop ≤1 pp and McNemar p≥0.05 by default, and ranks
+survivors by measured output throughput at the stated point. Mean-of-rep p95 values
+are compared to SLOs; bootstrap intervals and replication counts remain visible.
+Request-level goodput thresholds come from optional `request_slos` when passed to
+`run --constraints`; absent thresholds do not fabricate a goodput measurement.
 
-## Repository workflow and license
+## Statistical interpretation
 
-Public repository: https://github.com/Yaswanth2120/inferencepilot. Licensed under
-[MIT](LICENSE). `main` requires a PR, six successful offline CI jobs, a branch
-up to date with main, and resolved conversations; force pushes and deletion are
-blocked. M0 has a historical branch; M1 and every future milestone have named
-branches as requested. Future branches are reserved references, not completed
-milestones. See [CONTRIBUTING.md](CONTRIBUTING.md) for branch names, conventional
-commits, and the squash-merge workflow.
+Percentiles use type-7 linear interpolation. Intervals use 10,000 fixed-seed
+bootstrap resamples of reps; pooled requests are not independent replicates.
+Permutation tests are exact up to 20,000 assignments, otherwise 100,000 seeded
+Monte Carlo draws. Holm correction covers every workload/point/metric in one
+candidate comparison. Physical throughput includes transport-successful tokens;
+latency/goodput exclude invalid fixed-length outputs. More than 1% invalid requests
+makes the rep partial and excludes it from comparisons, with counts retained.
 
-M1 local verification (macOS, Python 3.12.9):
+MDE uses a random-intercept between/within-launch variance estimate and a nominal
+normal α=.05/80%-power approximation, derived in [DECISIONS.md](DECISIONS.md).
+MDE above the minimum effect or fewer than five reps forces `inconclusive`. A/A
+splits overlap, so its count-backed false-positive rate is descriptive. Rankings
+are observations among tested configurations, not proof of superiority or quality
+equivalence. The recommendation includes MDEs and inconclusive comparisons.
 
-```text
-pytest                  -> 63 passed in 3.33s
-ruff check .            -> All checks passed!
-inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
-plan + run --dry-run    -> 12 launches, 8 points each, 5.9067 illustrative GPU hours
-```
+## Prior art and limits
 
-M1 live paths: not run (needs GPU).
+vLLM 0.15.1 already has [parameter sweeps](https://docs.vllm.ai/en/v0.15.1/benchmarking/sweeps/),
+server startup, repeated runs, resume, SLA tuning, and visualization. InferencePilot
+claims no novelty for those. Its focus is replicated-launch comparison, explicit
+noise/MDE, corrected regression detection with measured synthetic validation,
+paired quality, and constrained recommendations. See [compatibility notes](docs/VLLM_COMPATIBILITY.md).
 
+Shared-host noise and server restarts can overwhelm small effects. Closed-loop
+concurrency measures capacity; the open-loop stage measures latency at specified
+arrival rates. Random-token and prefix workloads remain synthetic. A100 has no
+native FP8/FP4 compute; supported quantization may save memory without speeding up
+inference. Load probes and resolved logs determine what actually works.
 
-## M2 statistics
+GSM8K raw completions without chat templates/thinking mode measure relative quality
+on one task, not general capability. Findings are specific to pinned software,
+one GPU type and one model family. OFAT misses interactions except those tested in
+the combined candidate. Fixture/parsing compatibility remains provisional until
+checked against real output; E2E is reconstructed from TTFT plus streaming gaps,
+which can bundle tokens. If budget is tight, reduce scope explicitly; never silently
+lower replication standards or treat an underpowered result as no change.
 
-`inferencepilot.stats` uses only the Python standard library. Percentiles follow
-linear/type-7 interpolation: sort x, set h=(n-1)*p/100, and interpolate between
-the observations at floor(h) and ceil(h). SD uses the sample denominator n-1;
-CV is a dimensionless SD/abs(mean), undefined at a zero mean.
+No multi-GPU serving, other engines, cloud rental orchestration, or web UI is built.
+M9 remains the live cost/time risk. **Live paths: not run (needs GPU).**
 
-Bootstrap intervals resample scalar **rep-level** statistics, not individual
-requests: 10,000 resamples and a local seed by default. Two-sample permutation
-tests use absolute mean difference and enumerate up to 20,000 label assignments;
-larger problems use 100,000 seeded assignments with a conservative +1 correction.
-Holm adjustment preserves the input test order. Wilson intervals use the score
-formula, and McNemar uses the exact two-sided binomial discordance test.
+## GPU handoff and project guides
 
-MDE estimates separate between-launch and within-launch variance. With the
-three-baseline/one-candidate design, candidate launch noise stays in the standard
-error even if many reps are collected within that launch. It is a **normal
-planning approximation**, not a guaranteed power claim; M7 validates actual
-false-positive rate and power. See DECISIONS.md for the full derivation,
-assumptions, edge cases, and worked arithmetic. No GPU rental is needed.
+The next hardware stage is the owner-driven M9 campaign. Follow
+[the GPU runbook](docs/RUNBOOK_GPU.md) for the specified single A100 80 GB host,
+150 GB disk, vLLM 0.15.1, probes, calibration, tmux, backup, resume, and teardown.
+The 8–14-hour campaign allowance excludes rental setup overhead; check current
+provider costs before renting. Backups use SQLite's backup API before rsync.
 
-M2 local verification (macOS, Python 3.12.9):
+`make campaign PLAN=data/plan.json DB=data/campaign.db` previews the schedule;
+actual execution requires `EXECUTE=--execute`. `make report DB=... EXPERIMENT=...`
+renders into `reports/generated` (override `OUT=...`).
 
-```text
-pytest                  -> 130 passed in 3.70s (67 new cases)
-ruff check .            -> All checks passed!
-inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
-```
+[Master specification](AGENTS.md) · [Design](docs/DESIGN.md) ·
+[Decisions](DECISIONS.md) · [Function explanations](EXPLAINED.md) · [Contributing](CONTRIBUTING.md)
 
-The no-NumPy import check scans every Python module under src. Detector power
-validation is still M7. Live paths: not run (needs GPU).
+Verification history: M5 243 tests; M6 246 tests; M7 260 tests. M8 adds full report,
+constraint, calibration, preview, and backup checks. All are offline; see the M8
+verification entry below for the final count.
 
-
-## M3 server lifecycle and probes
-
-`ServerManager` starts one server in a new process group, captures its output
-under `data/logs/<launch_id>.log`, and waits for both health and the expected
-model. Before starting it checks the port, a single visible GPU below 2048 MiB
-used memory, existing vLLM processes, and the pinned version/flag contract.
-Unavailable safety tools cause refusal. It never terminates a process found by
-inspection; stop an image's auto-launched server yourself before the campaign.
-
-Shutdown signals only the group this manager started, waits up to 60 seconds,
-and escalates to SIGKILL if necessary. It then waits up to 120 seconds for GPU
-memory below the idle threshold. A cleanup failure is recorded and blocks a
-subsequent start. Read-only process inspection distinguishes exited/zombie
-groups from active processes; permission failures on a live group remain errors.
-
-GPU-machine commands for later owner execution:
-
-```sh
-inferencepilot probe --model Qwen/Qwen3-8B --variant bf16
-inferencepilot probe --model Qwen/Qwen3-8B --variant fp8_online
-inferencepilot probe --model Qwen/Qwen3-8B-AWQ --variant awq
-inferencepilot probe --model Qwen/Qwen3-8B-FP8 --variant fp8_ckpt
-inferencepilot probe --model Qwen/Qwen3-8B --variant chunked_prefill
-inferencepilot probe --model Qwen/Qwen3-8B --variant kv_cache_fp8
-```
-
-The chunked-prefill probe launches both directions and compares resolved values
-against requests. Missing or ignored resolved settings do not count as honored.
-Probe JSON defaults to `data/probes/` and contains requested settings, per-launch
-status, timing, log paths, parsed lines, cleanup state, and a failure log tail.
-Use `--out` to select a new file; existing probe outputs and launch logs are not
-overwritten. Exit 3 means a failed or unhonored probe/environment; exit 2 means
-invalid configuration or output-file errors. Failed loads are recorded as
-`unsupported_on_hardware` per launch, without proving the precise root cause.
-
-All startup parsing is **provisional** and omits fields not observed in logs;
-requested flags are never substituted as resolved values. Fake KV capacity,
-attention backend, and graph mode are synthetic fixtures, not GPU measurements.
-Real logs and quantized-load compatibility still require owner output in M9.
-Do not rent a GPU yet: M4–M8 remain offline prerequisites.
-
-M3 local verification (macOS, Python 3.12.9):
-
-```text
-pytest                  -> 177 passed in 25.61s (47 new cases)
-ruff check .            -> All checks passed!
-inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
-```
-
-Verified offline: startup/readiness, provisional parsing, startup crash/OOM
-classification, bounded failure logs, hangs/unhealthy/wrong-model refusal,
-owned child cleanup, TERM/KILL escalation, GPU-busy and cleanup safety gates,
-foreign-process survival, interruptions, and persistent load/factor probe evidence.
-Live GPU and real vLLM paths: not run (needs GPU).
-
-
-## M4 benchmark adapter and metrics
-
-`loadgen.build_command` wraps the pinned `vllm bench serve` interface. It always
-requests streaming raw completions, fixed lengths, ignored EOS, temperature 0,
-seeded input, ten warmups by default, detailed saved JSON, and TTFT/TPOT/ITL/E2E
-p50/p95/p99 summaries. Random lengths have range ratio zero. The prefix workload
-uses one shared prefix of 2048 tokens, a 256-token suffix, and 128 output tokens.
-Eight closed-loop points and three sample open-loop rates have exact argv snapshots.
-
-Closed-loop uses an infinite arrival rate with a concurrency cap; open-loop uses
-a finite rate with burstiness 1 and no client concurrency cap. The adapter builds
-arguments and parses artifacts; M6 will own invocation, scheduling, storage, and
-wall-clock budget enforcement. It does not implement a load generator.
-
-The pinned JSON has no per-request E2E array. `metrics` reconstructs E2E from
-TTFT plus streaming gaps and verifies p99 against the tool's reported value.
-A small first-token clock-reading skew is possible; this is provisional until
-real fixtures are collected. Streaming gaps may bundle output tokens, so pooled
-ITL and per-request token-average TPOT are explicitly distinct views.
-
-The parser requires aligned numeric detailed arrays and consistent outcome counts.
-Metrics fail with `AdapterBrokenError` if mean TTFT, p99 E2E, output throughput,
-or request throughput differs by **more than 1%**, or token totals disagree.
-Transport errors and output-length violations are counted separately; more
-than 1% failures makes a rep partial and excluded from comparisons. Exactly
-1% remains eligible with a visible note. With no valid full-length requests,
-the rep is failed. Empty distributions have n=0 and null statistics.
-
-Latency distributions and SLO goodput exclude non-fixed-length responses;
-physical token/request throughput follows the tool and includes all transport
-successes. A one-token response has no TPOT distribution observation; for
-SLO goodput only, its TPOT is zero as defined by the pinned tool. Every derived
-distribution and rate carries its request/gap count and units.
-
-For later scheduling, `baseline_chat_capacity` takes comparable baseline-chat
-closed-loop reps grouped by concurrency, uses each point's mean rep throughput,
-and chooses the largest tested point mean. Its result includes the selected
-concurrency, rep count, and excluded-rep count. `open_loop_loads` derives 50%,
-80%, and 95% rates from that measured estimate; it never invents a capacity
-from configuration settings. The caller must supply baseline/chat/closed data.
-
-All benchmark fixtures are synthetic/provisional. Real `vllm bench serve`
-compatibility and GPU measurements: not run (needs GPU).
-
-M4 local verification (macOS, Python 3.12.9):
-
-```text
-pytest                  -> 237 passed in 33.06s (60 new cases)
-ruff check .            -> All checks passed!
-inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
-```
-
-Verified: 11 exact argv snapshots, strict result parsing, hand-worked TTFT/E2E/
-pooled-ITL/TPOT/throughput/goodput, greater-than-1% mismatch detection, exact
-failure thresholds, truncation/zero-output accounting, measured-capacity rates,
-and built-command execution against the fake benchmark in both load modes.
-Real GPU and vLLM paths: not run (needs GPU).
-
-## M5 quality evaluation
-
-Quality command building, provisional gsm8k sample parsing, paired Wilson/McNemar
-statistics, and greedy integer-token agreement are implemented offline. The live
-extra pins lm-eval 0.4.9.2; raw completions use fixed five-shot prompts, greedy
-decoding, seed and a 512-token cap. Both extraction filters and sample hashes
-are retained. Agreement uses 200 fixed synthetic arithmetic prompts and compares
-returned token IDs, not an inferred tokenization of decoded strings.
-
-M5 verification: full suite passed before the final two rejection cases; final
-passing counts are recorded in the milestone PR. Real quality scores and harness
-execution: not run (needs GPU). No capability or quantization-quality result exists.
-
-M5 final verification: `pytest` passed 243 cases; `ruff check .` passed.
-
-## M6 persistent runner
-
-`run --plan plan.json --db data/experiment.db` now executes the stored schedule;
-`status`, `resume`, and `analyze` take `--db` and `--experiment ID`.
-Use `run --dry-run` first. `selftest` executes six fake server lifetimes, 120
-checkpointed reps, paired quality, token agreement, and an idempotent resume.
-Its outputs are synthetic and do not establish GPU compatibility or performance.
-Interrupted attempts keep their physical launch identity; completed reps are
-not replayed. Wall-clock budgets include time paused between attempts. A killed
-machine may leave a foreign server that requires owner cleanup before resuming.
-Live execution: **not run (needs GPU)**.
-
-M6 verification: `pytest -q` — **246 passed**; `ruff check .` passed. Live: not run (needs GPU).
-
-## M7 regression detector
-
-`regress --db DB --experiment ID --baseline baseline` stores the comparison
-family and returns exit code 1 only when a regression is found. `validate` runs
-all baseline leave-one-launch-out A/A splits and reports false findings with
-counts. `power --out reports/power.json` reproduces the fake-server power curve.
-The committed synthetic curve observed 0/20, 9/20, 20/20, and 20/20 detections at
-+2%, +5%, +10%, and +20%, respectively, with Wilson intervals in the artifact.
-This is one-metric simulated power, not measured GPU power. A +2% change is
-below the detector's fixed 5% decision threshold. The eager candidate's real
-regression behavior is **not run (needs GPU)**.
-
-M7 verification: `pytest -q` — **260 passed**; `ruff check .` passed. Live: not run (needs GPU).
+M8 local verification: full suite **274 passed**; the final goodput-direction and
+deadline checks **15 passed** (overlapping focused suite); `ruff check .` passed.
+The complete synthetic report and both plots were generated and visually checked.
+Campaign preview, fake calibration and WAL-safe backup have offline test coverage.
