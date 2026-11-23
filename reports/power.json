@@ -1,0 +1,49 @@
+{
+  "kind": "SYNTHETIC fake-server timing model; not GPU results",
+  "seed": 1729,
+  "min_effect_pct": 5,
+  "baseline_launches": 3,
+  "reps_per_launch": 5,
+  "launch_noise_uniform_pp": [
+    -0.2,
+    0.2
+  ],
+  "token_jitter_fraction": 0.005,
+  "method": "HTTP ASGI fake timing endpoint; independently seeded launches; detector defaults; 10000 bootstrap resamples",
+  "limitation": "One metric per family; real multi-metric family correction and real GPU noise may reduce power. Below-threshold effects intentionally do not count as regressions.",
+  "results": [
+    {
+      "injected_slowdown_pct": 2,
+      "detected": 0,
+      "n_trials": 20,
+      "detection_rate": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.16112515805281927
+    },
+    {
+      "injected_slowdown_pct": 5,
+      "detected": 9,
+      "n_trials": 20,
+      "detection_rate": 0.45,
+      "ci_low": 0.25819785825562425,
+      "ci_high": 0.6579146575496576
+    },
+    {
+      "injected_slowdown_pct": 10,
+      "detected": 20,
+      "n_trials": 20,
+      "detection_rate": 1.0,
+      "ci_low": 0.8388748419471808,
+      "ci_high": 1.0
+    },
+    {
+      "injected_slowdown_pct": 20,
+      "detected": 20,
+      "n_trials": 20,
+      "detection_rate": 1.0,
+      "ci_low": 0.8388748419471808,
+      "ci_high": 1.0
+    }
+  ],
+  "live": "not run (needs GPU)"
+}

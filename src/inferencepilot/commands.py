@@ -5,7 +5,7 @@ import signal
 import subprocess
 import sys
 
-from inferencepilot import analysis
+from inferencepilot import analysis, regress
 from inferencepilot.config import ExperimentPlan
 from inferencepilot.plan_commands import plan_json, run_command
 from inferencepilot.planner import make_plan
@@ -67,6 +67,36 @@ def database_command(args):
                     }
                 )
             )
+        elif args.command == "regress":
+            rows = regress.compare_experiment(records, args.baseline, args.min_effect_pct)
+            store.replace_regressions(args.experiment, rows)
+            print(
+                encode(
+                    {
+                        "summary": regress.summary(rows),
+                        "configs": [
+                            {
+                                "label": config["label"],
+                                "role": config["role"],
+                                **regress.summary(
+                                    [
+                                        row
+                                        for row in rows
+                                        if row["candidate_config_id"] == config["id"]
+                                    ]
+                                ),
+                            }
+                            for config in records["configs"]
+                            if config["role"] != "baseline"
+                        ],
+                    }
+                )
+            )
+            return int(any(row["verdict"] == "regression" for row in rows))
+        elif args.command == "validate":
+            result = regress.validate(records)
+            store.set_meta("validation:" + args.experiment, encode(result))
+            print(encode(result))
         else:
             print(encode(analysis.aggregate(records)))
         return 0
@@ -77,4 +107,10 @@ def database_command(args):
 def selftest():
     return subprocess.run(
         [sys.executable, "-m", "inferencepilot.fakes.selftest"], check=False
+    ).returncode
+
+
+def power(output):
+    return subprocess.run(
+        [sys.executable, "-m", "inferencepilot.fakes.power", "--out", output], check=False
     ).returncode
