@@ -2,7 +2,7 @@
 
 InferencePilot is being built to compare tested vLLM serving configurations with
 replicated launches, noise-aware statistics, paired quality checks, and a
-constraint-based recommendation. **Current stage: M2 pure-Python statistics.**
+constraint-based recommendation. **Current stage: M3 server lifecycle and probes.**
 There are no live benchmark results yet.
 
 ## Quickstart (no GPU)
@@ -38,7 +38,8 @@ not need those tools. It never loads a model or imports vLLM.
 - [x] M1 deterministic OFAT plans, baseline placement, calibration estimate, and dry-run.
 - [x] M1 configuration validation and missing-flag checks against fake full help.
 - [x] M2 descriptive statistics, seeded bootstrap/permutation tests, Holm, Wilson, McNemar, and MDE.
-- [ ] M3–M8 server management, adapters, runner, quality, detector, and reports.
+- [x] M3 owned process groups, readiness, provisional resolved logs, safety checks, and load/factor probes.
+- [ ] M4–M8 adapters, runner, quality, detector, and reports.
 - [ ] M9 live campaign: **not run (needs GPU)**.
 
 No rental GPU is needed for M0–M8. Rent only when M9 prerequisites are ready;
@@ -186,3 +187,59 @@ inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
 
 The no-NumPy import check scans every Python module under src. Detector power
 validation is still M7. Live paths: not run (needs GPU).
+
+
+## M3 server lifecycle and probes
+
+`ServerManager` starts one server in a new process group, captures its output
+under `data/logs/<launch_id>.log`, and waits for both health and the expected
+model. Before starting it checks the port, a single visible GPU below 2048 MiB
+used memory, existing vLLM processes, and the pinned version/flag contract.
+Unavailable safety tools cause refusal. It never terminates a process found by
+inspection; stop an image's auto-launched server yourself before the campaign.
+
+Shutdown signals only the group this manager started, waits up to 60 seconds,
+and escalates to SIGKILL if necessary. It then waits up to 120 seconds for GPU
+memory below the idle threshold. A cleanup failure is recorded and blocks a
+subsequent start. Read-only process inspection distinguishes exited/zombie
+groups from active processes; permission failures on a live group remain errors.
+
+GPU-machine commands for later owner execution:
+
+```sh
+inferencepilot probe --model Qwen/Qwen3-8B --variant bf16
+inferencepilot probe --model Qwen/Qwen3-8B --variant fp8_online
+inferencepilot probe --model Qwen/Qwen3-8B-AWQ --variant awq
+inferencepilot probe --model Qwen/Qwen3-8B-FP8 --variant fp8_ckpt
+inferencepilot probe --model Qwen/Qwen3-8B --variant chunked_prefill
+inferencepilot probe --model Qwen/Qwen3-8B --variant kv_cache_fp8
+```
+
+The chunked-prefill probe launches both directions and compares resolved values
+against requests. Missing or ignored resolved settings do not count as honored.
+Probe JSON defaults to `data/probes/` and contains requested settings, per-launch
+status, timing, log paths, parsed lines, cleanup state, and a failure log tail.
+Use `--out` to select a new file; existing probe outputs and launch logs are not
+overwritten. Exit 3 means a failed or unhonored probe/environment; exit 2 means
+invalid configuration or output-file errors. Failed loads are recorded as
+`unsupported_on_hardware` per launch, without proving the precise root cause.
+
+All startup parsing is **provisional** and omits fields not observed in logs;
+requested flags are never substituted as resolved values. Fake KV capacity,
+attention backend, and graph mode are synthetic fixtures, not GPU measurements.
+Real logs and quantized-load compatibility still require owner output in M9.
+Do not rent a GPU yet: M4–M8 remain offline prerequisites.
+
+M3 local verification (macOS, Python 3.12.9):
+
+```text
+pytest                  -> 177 passed in 25.61s (47 new cases)
+ruff check .            -> All checks passed!
+inferencepilot selftest -> M0 CLI wiring OK; full pipeline pending M6
+```
+
+Verified offline: startup/readiness, provisional parsing, startup crash/OOM
+classification, bounded failure logs, hangs/unhealthy/wrong-model refusal,
+owned child cleanup, TERM/KILL escalation, GPU-busy and cleanup safety gates,
+foreign-process survival, interruptions, and persistent load/factor probe evidence.
+Live GPU and real vLLM paths: not run (needs GPU).

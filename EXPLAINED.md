@@ -462,3 +462,227 @@ MDE from masking a design that cannot estimate its own noise.
 `test_source_has_no_numpy_imports` parses every Python module under src and
 inspects its import statements. This enforces the project's no-NumPy library
 constraint without installing NumPy or relying on a fragile text match.
+
+# M3 server lifecycle, probes, and changed wiring
+
+`env.vllm_errors` extracts the existing binary/version/full-help validation into
+a reusable function. Doctor and ServerManager now share the same contract checks
+instead of maintaining slightly different notions of compatibility.
+
+`env.doctor` uses that shared validation before its existing environment report.
+Its output and exit-code contract remain unchanged while preflight can reuse it.
+
+`env.gpu_memory_used` queries one visible GPU and parses numeric used memory in MiB.
+Missing tools, ambiguous multi-GPU output, and invalid numbers cause refusal
+because unknown memory use cannot establish a safe launch.
+
+`env.vllm_processes` identifies serving executables, Python vLLM modules, and worker
+names in read-only process output. It returns only PIDs and executable names so
+an existing server's arguments cannot leak an API key into a launch error.
+
+`env.process_group_active` checks group IDs and process states through read-only ps.
+It treats only zombies as inactive because they cannot run or retain GPU allocations,
+and unknown inspection output fails rather than being interpreted as a clean exit.
+
+`ServerTimeouts.__post_init__` checks every configured deadline and poll interval.
+Rejecting nonfinite or nonpositive values prevents unbounded or busy-loop lifecycle waits.
+
+`server.parse_resolved_config` extracts observed engine settings from provisional
+startup log shapes while retaining raw matched lines. Later values override earlier
+ones, and missing values are not filled from requested flags.
+
+`server.log_tail` reads only the last 200 lines into a bounded deque.
+It makes startup failures inspectable without placing an entire long log in a result.
+
+`server.preflight` checks port availability, memory, other serving processes, and
+version/flag compatibility. It never signals discovered processes, and its refusal
+messages tell the owner how to handle an image's auto-launched server.
+
+`ServerManager.__init__` records the binary, log directory, timeouts, and initially
+empty ownership state. A manager without a successful Popen has no group it can signal.
+
+`ServerManager.start` creates an exclusive log, validates safety, launches in a
+new process group, and waits for readiness. It records startup results and attempts
+cleanup on failure or interruption, preserving a failed cleanup gate for the next start.
+
+`ServerManager._wait_ready` polls both health and the advertised model list within
+a bounded deadline. It requires the expected model and an owned process that is
+still alive, rather than accepting any process answering the same port.
+
+`ServerManager._signal_group` sends a signal only to the remembered owned group.
+If a permission error races with exit, it suppresses the error only after separate
+read-only inspection confirms the group no longer has an active member.
+
+`ServerManager._group_exists` checks the owned group through process-state inspection.
+It avoids using signal zero as a potentially permission-sensitive existence probe.
+
+`ServerManager._wait_exit` polls/reaps the direct parent and checks for active group
+members until a deadline. Reaping the parent prevents its own zombie from keeping
+a normal cleanup waiting unnecessarily.
+
+`ServerManager._wait_gpu` polls memory until it is below the idle threshold or the
+release timeout expires. It keeps the pending flag set on errors so an unsafe
+next launch cannot quietly proceed.
+
+`ServerManager.stop` sends TERM and, if needed, KILL to the owned group before
+closing logs and checking GPU release. It is idempotent on completed cleanup and
+records/raises cleanup failures without forgetting ownership.
+
+`probe.probe_specs` builds validated configurations for weights, both chunked-prefill
+directions, or FP8 KV cache. Invalid model/variant combinations fail before any process starts.
+
+`probe.run_probe` executes and tears down each probe, preserving requested settings
+and complete launch results. It compares actual resolved optional-factor values and
+halts additional probes after cleanup failure instead of claiming support.
+
+`probe.probe_command` validates CLI input, runs probes, and writes an exclusive JSON
+result file. It reports configuration errors separately from unsuccessful probes and
+never overwrites existing output or silently edits an experiment plan.
+
+`cli.main` wires the probe options to the new handler.
+The CLI still does not contain lifecycle, hardware, or parsing logic.
+
+`command.serve` now emits additional provisional KV/backend/graph settings and
+supports startup hangs, unhealthy responses, wrong models, and ignored chunk flags.
+These controls exercise lifecycle failures without importing or running real vLLM.
+
+`create_app.health` can now return the fake's configured unhealthy response.
+Its default remains healthy so earlier fake-server behavior and tests remain intact.
+
+# M3 unit tests
+
+`test_resolved_config_provisional_fixture` checks every supported resolved field
+against a constructed full startup log. It also checks matched raw lines and the
+provisional marker remain attached for later replacement with real evidence.
+
+`test_log_overrides_unknown_fields_and_ansi` checks later overrides and colored log
+matching. It ensures absent fields remain absent rather than being invented from a request.
+
+`test_tail_is_last_200_lines` checks the exact retained range of a 300-line file.
+It also checks a missing log yields an empty tail without masking the main failure.
+
+`test_timeout_validation` rejects zero, negative, nonfinite, and boolean timing values.
+These cannot represent a meaningful bounded lifecycle wait.
+
+`test_gpu_query_rejects_unknown_or_multiple_gpus` supplies malformed or ambiguous
+GPU memory output. A successful subprocess exit alone must not make unknown memory safe.
+
+`test_unavailable_safety_tools` simulates a failed system command.
+It verifies memory, process discovery, and group-exit inspection all fail closed.
+
+`test_process_scan_matches_executables_not_mentions` mixes serving processes with
+unrelated tests, shell text, and Python arguments containing vllm. It verifies
+only executable/module identities are treated as existing servers.
+
+`test_sigkill_escalation_and_owned_group_only` simulates a group that outlives TERM.
+It checks KILL targets that same owned group and an idempotent stop sends no further signals.
+
+`test_cleanup_failure_retains_ownership` simulates a group still active after KILL.
+It checks the failure remains recorded and ownership is retained for a later cleanup attempt.
+
+`test_process_scan_failure_and_secret_redaction` supplies an existing server with an
+API-key argument, then malformed ps output. It verifies diagnostics omit arguments
+and malformed inspection does not get interpreted as no existing server.
+
+`test_group_state_uses_read_only_inspection` supplies active, zombie, and missing
+group IDs in process output. It verifies only active members keep a group pending cleanup.
+
+`test_live_permission_failure_is_not_ignored` simulates a denied signal against a
+still-live group. It checks stop raises and retains the next-launch gate.
+
+`test_live_permission_failure_is_not_ignored.denied` raises a controlled permission error.
+The test can verify refusal without attempting to signal any real process group.
+
+`test_exited_group_permission_race_is_verified` simulates exit between inspection
+and a failed signal. It requires a second inspection before accepting that cleanup is safe.
+
+`test_exited_group_permission_race_is_verified.denied_after_exit` raises the signal
+error during that simulated race. The parent test controls process-state inspection
+independently rather than suppressing all permission errors.
+
+`test_probe_variant_spec` checks each published model/quantization mapping used by probes.
+It ensures a requested weight variant is not silently replaced with baseline weights.
+
+`test_optional_probe_specs` checks both boolean chunk probes and the FP8 KV request.
+It also rejects an unknown variant before reaching a server manager.
+
+`test_cleanup_failure_preserves_evidence_and_stops_following_probes` injects cleanup
+failure into a probe manager. It checks the evidence survives, no further launch starts,
+and an empty probe set cannot be labeled supported.
+
+`test_invalid_or_existing_probe_output_never_starts` supplies an invalid model and an
+already existing output path. It checks both refuse before creating a manager and keep
+the existing file unchanged.
+
+# M3 integration fixtures and tests
+
+`fake_machine` places fake NVIDIA/preflight-process commands ahead of the real PATH.
+Group-exit inspection still delegates to the actual OS ps so child cleanup is tested
+against real subprocesses rather than a fake absence result.
+
+`spec` allocates an ephemeral local port and returns a validated baseline configuration.
+Tests avoid hardcoded shared ports that could conflict with other development services.
+
+`manager` creates a fake-binary manager with per-test logs and short bounded waits.
+This exercises the production lifecycle code while keeping failure tests quick and offline.
+
+`test_start_readiness_resolved_and_child_tree` launches the fake, reads resolved values,
+and verifies the child exists. After stopping, it checks the child is gone and lifecycle
+timestamps and cleanup state are recorded.
+
+`test_port_busy_never_signals_external_process` occupies the requested port while an
+unrelated process is alive. It checks refusal sends no group signal and the unrelated
+process survives.
+
+`test_gpu_busy_refuses_and_stop_before_start_is_safe` supplies the exact idle-threshold
+memory usage through the fake NVIDIA executable. It verifies no process starts or receives
+a signal, including an initial stop on an unused manager.
+
+`test_existing_vllm_process_is_not_killed` advertises an existing process as a server.
+It checks refusal leaves that process alive instead of attempting to free the GPU itself.
+
+`test_startup_crash_tail_and_probe_classification` injects an OOM-shaped startup failure
+with more than 200 diagnostic lines. It checks ordinary versus load-probe statuses and the
+exact bounded tail retained in the error.
+
+`test_readiness_failure_cleans_child` exercises a startup hang, unhealthy health endpoint,
+and wrong advertised model. All three must time out and finish owned-process cleanup.
+
+`test_gpu_release_timeout_blocks_next_launch` changes fake memory to busy after readiness.
+It checks timeout prevents a new launch, then confirms an explicit stop can finish once
+the simulated memory condition clears.
+
+`test_factor_probe_records_honored_and_ignored_flags` runs both chunk directions, then
+repeats with the fake forcing chunked prefill on. It checks the ignored flag is recorded
+as not honored with both requested and observed values preserved.
+
+`test_probe_cli_saves_evidence` invokes the installed CLI against the fake binary.
+It verifies successful JSON evidence includes the completed cleanup state.
+
+`test_duplicate_launch_id_does_not_overwrite` reuses an already recorded launch ID.
+It checks refusal preserves every byte of the original log rather than destroying provenance.
+
+`test_missing_flag_refuses_before_spawn` hides a required option from the fake help.
+It checks preflight fails before ownership or server startup is established.
+
+`test_spawn_error_never_signals_unowned_group` makes Popen fail after preflight.
+It checks no group signal is sent when no owned child was successfully returned.
+
+`test_spawn_error_never_signals_unowned_group.fail_spawn` raises a controlled OS spawn
+failure. This isolates the ownership boundary without needing an unreliable real OS fault.
+
+`test_active_launch_cannot_be_replaced` attempts another start while a server is ready.
+It checks the original launch record stays current until explicit cleanup finishes.
+
+`test_probe_cli_failure_keeps_log_evidence` runs an injected crash through the CLI.
+It checks exit 3 still writes per-launch unsupported status and startup diagnostics to JSON.
+
+`test_invalid_launch_id_is_rejected` supplies a path-traversal-shaped launch ID.
+It verifies the identifier is refused before a group can be created or a log written outside its directory.
+
+`test_interrupted_start_cleans_owned_process` raises KeyboardInterrupt after actual readiness.
+It checks the interrupt propagates while the launch records aborted and completes cleanup.
+
+`test_interrupted_start_cleans_owned_process.interrupt_after_ready` waits for the real
+fake-server readiness path before raising. This ensures the interruption test owns an actual
+server/child tree rather than only simulating ownership metadata.

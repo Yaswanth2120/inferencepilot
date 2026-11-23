@@ -1,0 +1,6 @@
+PROVISIONAL: constructed from documented vLLM shapes, not a captured GPU log.
+(EngineCore_DP0 pid=123) INFO [core.py:0] Initializing a V1 LLM engine (v0.15.1) with config: model='Qwen/Qwen3-8B', dtype=torch.bfloat16, max_seq_len=8192, quantization=None, enforce_eager=False, kv_cache_dtype=auto, enable_prefix_caching=True, enable_chunked_prefill=True, compilation_config={'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>}
+INFO [scheduler.py:0] Chunked prefill is enabled with max_num_batched_tokens=2,048.
+INFO [kv_cache_utils.py:0] GPU KV cache size: 65,536 tokens
+INFO [kv_cache_utils.py:0] Maximum concurrency for 8,192 tokens per request: 8.00 x
+INFO [backend.py:0] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN']

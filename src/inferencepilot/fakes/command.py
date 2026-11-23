@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from inferencepilot.fakes.fake_vllm import Settings, create_app, delays
@@ -83,8 +84,18 @@ def serve(args):
     import uvicorn
 
     if os.environ.get("INFERENCEPILOT_FAKE_CRASH") == "1":
-        print("provisional: injected startup crash", flush=True)
+        for index in range(int(os.environ.get("INFERENCEPILOT_FAKE_CRASH_LINES", "0"))):
+            print(f"startup diagnostic {index}", flush=True)
+        print(
+            os.environ.get(
+                "INFERENCEPILOT_FAKE_CRASH_MESSAGE", "provisional: injected startup crash"
+            ),
+            flush=True,
+        )
         return 1
+    chunked_prefill = (
+        not args.chunk_off or os.environ.get("INFERENCEPILOT_FAKE_FORCE_CHUNKED") == "1"
+    )
     print(
         "PROVISIONAL resolved config: "
         + json.dumps(
@@ -92,7 +103,8 @@ def serve(args):
                 "model": args.model,
                 "max_model_len": int(args.max_model_len or 8192),
                 "enable_prefix_caching": not args.prefix_off,
-                "enable_chunked_prefill": not args.chunk_off,
+                "enable_chunked_prefill": chunked_prefill,
+                "kv_cache_dtype": args.kv_cache_dtype or "auto",
                 "max_num_batched_tokens": int(args.max_num_batched_tokens or 8192),
                 "quantization": args.quantization,
                 "enforce_eager": args.eager,
@@ -105,16 +117,32 @@ def serve(args):
         f"model={args.model!r}, max_seq_len={int(args.max_model_len or 8192)}, "
         f"quantization={args.quantization!r}, enforce_eager={args.eager}, "
         f"enable_prefix_caching={not args.prefix_off}, "
-        f"enable_chunked_prefill={not args.chunk_off}",
+        f"enable_chunked_prefill={chunked_prefill}",
         flush=True,
     )
-    if not args.chunk_off:
+    if chunked_prefill:
         print(
             "INFO [scheduler.py:0] Chunked prefill is enabled with "
             f"max_num_batched_tokens={int(args.max_num_batched_tokens or 8192)}.",
             flush=True,
         )
-    settings = Settings(model=args.model, seed=int(args.seed or 0))
+    print("INFO [kv_cache_utils.py:0] GPU KV cache size: 65,536 tokens", flush=True)
+    print(
+        "INFO [kv_cache_utils.py:0] Maximum concurrency for 8,192 tokens per request: 8.00x",
+        flush=True,
+    )
+    print("INFO [backend.py:0] Using FAKE attention backend", flush=True)
+    print(
+        'INFO compilation_config={"cudagraph_mode": "NONE"}'
+        if args.eager
+        else 'INFO compilation_config={"cudagraph_mode": "FULL_AND_PIECEWISE"}',
+        flush=True,
+    )
+    settings = Settings(
+        model=os.environ.get("INFERENCEPILOT_FAKE_SERVED_MODEL", args.model),
+        seed=int(args.seed or 0),
+    )
+    settings.healthy = os.environ.get("INFERENCEPILOT_FAKE_UNHEALTHY") != "1"
     for name in (
         "token_delay",
         "prefill_per_token",
@@ -147,6 +175,9 @@ def serve(args):
     signal.signal(signal.SIGINT, terminate)
     print(f"FAKE child_pid={child.pid}", flush=True)
     try:
+        if os.environ.get("INFERENCEPILOT_FAKE_NEVER_READY") == "1":
+            print("FAKE startup hang", flush=True)
+            time.sleep(3600)
         uvicorn.run(
             create_app(settings),
             host=args.host or "127.0.0.1",
