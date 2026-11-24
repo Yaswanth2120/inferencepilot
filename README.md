@@ -194,3 +194,8 @@ separate live validation. The real vLLM 0.32.0 smoke result passed adapter cross
 its fixture is tested offline. The larger benchmark is tracked in
 [the live validation note](reports/gptoss-20261124/README.md). This does not complete
 the pinned Qwen campaign. Local verification: **283 passed**, Ruff passed.
+
+GPT-OSS live validation completed: **30/30 reps**, **3,000 requests**, **108.4 minutes**.
+All raw files were rechecked locally and the archived DB passed integrity checks.
+[Final report](reports/gptoss-20261124/report.md) records the single-lifetime,
+max_num_seqs=1 queueing limitation; quality and the Qwen campaign remain unrun.

@@ -1,6 +1,8 @@
 # Owner-selected GPT-OSS validation — 2026-11-24
 
-Status: live smoke passed; the 30-rep serving benchmark was launched and is **in progress**.
+Status: **completed** — 30/30 reps passed, 3,000 requests, 768,000 output tokens, 108.4 minutes.
+
+[Final Markdown report](report.md) · [JSON evidence](report.json)
 This is not a completed Qwen campaign or an independent-launch regression study.
 
 Observed hardware/software:
@@ -36,5 +38,5 @@ API before transfer. Do not destroy the rental before checking the final archive
 
 Startup time, restarted configurations, context/OOM boundary above 8192, independent
 launch noise, the Qwen campaign and paired model-quality comparisons: **not run
-(needs GPU)**. Final benchmark aggregates will be published after checking the
-terminal status and archived DB. No v0.1.0 release claim is made.
+(needs GPU)**. All 30 raw result files were re-parsed and verified locally after completion; the
+off-machine archive passed SQLite integrity checks. Final aggregates are published above. No v0.1.0 release claim is made.
