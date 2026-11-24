@@ -58,6 +58,8 @@ def test_interrupt_resume(tmp_path, monkeypatch):
             str(db),
             "--quality-limit",
             "4",
+            "--evidence",
+            "synthetic",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -82,6 +84,7 @@ def test_interrupt_resume(tmp_path, monkeypatch):
         process.wait(timeout=15)
         store = Store(db)
         identity = store.rows("experiments")[0]["id"]
+        assert json.loads(store.meta("evidence:" + identity))["kind"] == "synthetic"
         before = {r["id"]: r for r in store.records(identity)["reps"]}
         assert store.rows("experiments")[0]["status"] == "aborted"
         options = Options(
@@ -93,6 +96,7 @@ def test_interrupt_resume(tmp_path, monkeypatch):
         Runner(store, options).run(experiment=identity)
         records = store.records(identity)
         assert records["experiment"]["status"] == "completed"
+        assert json.loads(store.meta("evidence:" + identity))["kind"] == "synthetic"
         assert len(records["reps"]) == 120
         assert all(rep in {r["id"] for r in records["reps"]} for rep in before)
         seen = set()

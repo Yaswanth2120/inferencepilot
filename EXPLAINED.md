@@ -1093,3 +1093,17 @@ The campaign wrapper defaults to a dry run and checks measured calibration and p
 `run` executes and checkpoints the selected workload points, enforcing a persisted creation-time budget and checking every result through the existing adapter. Resume skips committed logical reps and rejects changed options rather than relabelling a different experiment.
 
 `main` validates the three-hour cap and acquires an exclusive external-campaign lock. This prevents duplicate benchmark workers from corrupting the intended load schedule.
+
+### Offline live-readiness fixes
+
+`env.gpu_telemetry` samples memory, clocks, power, temperature and utilization through the existing bounded command helper. It preserves timestamps, unavailable values and errors so diagnostics never invent zero readings.
+
+`quality.evaluation_key` identifies the model/precision and fixed evaluation protocol eligible for reuse. Scheduling-only settings share evidence, while combined candidates include their full config and identity for independent validation.
+
+`Store.checkpoint_quality` commits a measured result and its reusable source pointer in one transaction. A failed insertion cannot leave a cache entry referring to nonexistent evidence.
+
+`Runner.evaluate_gsm8k` selects a valid saved source or performs a new harness evaluation, retaining paired comparisons and original sample lineage. Failed measurements never become reusable successes, and a committed first-baseline source can repair its interrupted reference-pointer update.
+
+`report.evidence_scope` turns an explicit declaration and rep statuses into an accurate report label. It treats legacy provenance as unverified and avoids claiming successful live execution when no valid rep exists.
+
+The runner now persists evidence declarations and full telemetry, and the report/recommender carry inherited quality source IDs. These changes retain the original statistical computations and make evidence reuse visible rather than silently increasing the apparent sample count.

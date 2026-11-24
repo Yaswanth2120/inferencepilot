@@ -97,6 +97,7 @@ def recommend(candidates, constraints):
                     quality=evidence["accuracy"],
                     n_reps=throughput["n_reps"],
                     quality_n=evidence["n"],
+                    quality_source=evidence.get("source"),
                     warnings=candidate.get("warnings", []),
                 )
             )

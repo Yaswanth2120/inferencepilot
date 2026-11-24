@@ -27,4 +27,4 @@ for config in plan.configs:
         raise SystemExit(f'Unresolved load probe: {config.label}')
 PY
 inferencepilot doctor
-exec inferencepilot run --plan "$plan" --db "$campaign_db" --constraints configs/constraints.yaml
+exec inferencepilot run --plan "$plan" --db "$campaign_db" --constraints configs/constraints.yaml --evidence live

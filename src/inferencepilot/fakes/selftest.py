@@ -1,5 +1,6 @@
 """Explicitly synthetic, offline campaign; production modules never import fakes."""
 
+import json
 import os
 import socket
 import sys
@@ -78,6 +79,7 @@ def campaign(directory):
     binaries = fake_path()
     store = Store(Path(directory) / "experiment.db")
     options = Options(
+        evidence="synthetic",
         binary=str(binaries / "vllm"),
         quality_binary=str(binaries / "lm_eval"),
         quality_limit=4,
@@ -107,6 +109,13 @@ def main():
         records = store.records(identity)
         assert len([launch for launch in records["launches"] if launch["status"] == "ok"]) == 6
         assert len(records["quality"]) == 6
+        assert (
+            sum(
+                not json.loads(row["metrics"]).get("inherited", False) for row in records["quality"]
+            )
+            == 2
+        )
+        assert all(json.loads(row["gpu_before"])["available"] for row in records["reps"])
         assert len(records["agreement"]) == 5
         bundle = report.prepare(store, identity, synthetic_constraints())
         report.write(bundle, Path(directory) / "report")

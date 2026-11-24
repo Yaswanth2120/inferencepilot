@@ -85,3 +85,13 @@ The owner follows [RUNBOOK_GPU.md](RUNBOOK_GPU.md) for M9; the remaining
 main-pipeline live paths are **not run (needs GPU)**. The owner-selected GPT-OSS
 existing-server subset is complete with a real fixture and archived report.
 Remaining optional M10 scope, M11 and the release tag remain separate gates.
+
+## Offline readiness updates
+
+New experiment provenance is an explicit schema_meta declaration; reports leave
+legacy provenance unverified. Telemetry captures all six diagnostic fields without
+inventing unsupported values. Quality caching shares a successful original
+model/precision/protocol evaluation, records inherited source IDs, and forces a
+separate combined-config evaluation. The row/cache commit is atomic, while
+performance launch replication and per-launch agreement checks remain unchanged.
+The owner currently prohibits rental access; all new verification used local fakes.

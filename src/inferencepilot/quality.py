@@ -222,3 +222,33 @@ async def agreement_check(
     async with httpx.AsyncClient(base_url=base_url, timeout=60, trust_env=False) as client:
         outputs = await greedy_outputs(client, model, prompts, max_tokens, seed)
     return outputs, agreement(reference_outputs, outputs) if reference_outputs is not None else None
+
+
+def evaluation_key(spec, role, config_id, limit):
+    """Share scheduling-only quality evidence; combined candidates get their own evaluation."""
+    import hashlib
+
+    if limit is not None and (
+        isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 1319
+    ):
+        raise ValueError("quality limit must be the first N problems, 1<=N<=1319")
+    fields = (
+        "variant",
+        "model",
+        "quantization",
+        "dtype",
+        "kv_cache_dtype",
+        "max_model_len",
+        "seed",
+    )
+    identity = {name: getattr(spec, name) for name in fields}
+    identity.update(
+        task="gsm8k",
+        harness_version=LM_EVAL_VERSION,
+        subset=limit or 1319,
+        fewshot=5,
+        max_gen_tokens=512,
+    )
+    if role == "combined":
+        identity.update(combined_config_id=config_id, full_spec=spec.model_dump())
+    return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()

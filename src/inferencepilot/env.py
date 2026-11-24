@@ -222,3 +222,47 @@ def process_group_active(group):
         if int(parts[0]) == group and not parts[1].startswith("Z"):
             return True
     return False
+
+
+def gpu_telemetry():
+    """Sample supported GPU fields; missing diagnostics never become fabricated zeroes."""
+    import csv
+    import time
+
+    names = (
+        "memory_used_mib",
+        "sm_clock_mhz",
+        "memory_clock_mhz",
+        "power_w",
+        "temperature_c",
+        "utilization_pct",
+    )
+    sample = dict(
+        sampled_at=time.time(), available=False, values=dict.fromkeys(names), unsupported=[]
+    )
+    result = command_output(
+        [
+            "nvidia-smi",
+            "--query-gpu=memory.used,clocks.sm,clocks.mem,power.draw,temperature.gpu,utilization.gpu",
+            "--format=csv,noheader,nounits",
+        ]
+    )
+    if not result["available"]:
+        return {**sample, "error": result.get("error", "GPU telemetry unavailable")}
+    rows = list(csv.reader(result["output"].splitlines()))
+    if len(rows) != 1 or len(rows[0]) != len(names):
+        return {**sample, "error": "telemetry requires exactly one GPU and six fields"}
+    for name, raw in zip(names, rows[0]):
+        raw = raw.strip()
+        if raw.lower() in ("n/a", "[n/a]", "not supported", "[not supported]"):
+            sample["unsupported"].append(name)
+            continue
+        try:
+            value = float(raw)
+        except ValueError:
+            return {**sample, "error": f"invalid telemetry value for {name}"}
+        if not math.isfinite(value) or value < 0 or (name == "utilization_pct" and value > 100):
+            return {**sample, "error": f"invalid telemetry range for {name}"}
+        sample["values"][name] = value
+    sample["available"] = True
+    return sample

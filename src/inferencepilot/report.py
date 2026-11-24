@@ -10,8 +10,29 @@ from inferencepilot.recommend import Constraints, recommend
 from inferencepilot.store import encode
 
 
+def evidence_scope(kind, records):
+    """Describe declared measurement origin without inferring live execution from a GPU name."""
+    if kind == "synthetic":
+        return "synthetic offline measurements; live model paths: not run (needs GPU)"
+    if kind == "live":
+        valid = sum(rep["status"] == "ok" for rep in records["reps"])
+        if not valid:
+            return "live campaign declared; no successful measured reps captured"
+        return f"live measurements declared; {valid} successful measured reps; campaign status={records['experiment']['status']}"
+    if kind == "unverified":
+        return "measurement provenance unverified; no live execution claim"
+    raise ValueError("unknown measurement provenance")
+
+
 def prepare(store, experiment, constraints):
     records = store.records(experiment)
+    saved = store.meta("evidence:" + experiment)
+    evidence = (
+        json.loads(saved)
+        if saved
+        else {"kind": "unverified", "basis": "legacy database; provenance not recorded"}
+    )
+    scope = evidence_scope(evidence["kind"], records)
     constraints = Constraints.model_validate(constraints)
     aggregates = analysis.aggregate(records)
     comparisons = regress.compare_experiment(records)
@@ -41,9 +62,11 @@ def prepare(store, experiment, constraints):
         regressions=comparisons,
         validation=validation,
         recommendation=decision,
-        live="not run (needs GPU)",
+        evidence=evidence,
+        live=scope,
         measurement_notes=[
             "Latency values are mean-of-rep percentiles in ms; intervals resample reps (10000 draws).",
+            "Quality rows marked inherited reuse the named original evaluation; they are not new GSM8K measurements. Combined candidates require their own evaluation.",
             "E2E is reconstructed from TTFT plus streaming gaps. Parser and fake fixtures remain provisional.",
             "Inconclusive comparisons and MDE accompany ranking; no statistical superiority is inferred from rank.",
         ],
@@ -136,7 +159,9 @@ def markdown(bundle):
             "",
             "## Quality and McNemar",
             "",
-            "| Config / launch | Task | n | Evidence (accuracy CI and paired McNemar) |",
+            "Inherited rows reuse their named source evaluation; do not sum them as independent samples.",
+            "",
+            "| Config / launch | Task | n source problems | Evidence (accuracy CI and paired McNemar) |",
             "|---|---|---|---|",
         ]
     )
@@ -174,7 +199,9 @@ def markdown(bundle):
             "",
             *bundle["measurement_notes"],
             "",
-            "OFAT does not explore all interactions. The combined candidate is independently measured. Live: not run (needs GPU).",
+            "OFAT does not explore all interactions. Combined candidates require their own measured validation. Evidence: "
+            + bundle["live"]
+            + ".",
             "",
         ]
     )
@@ -219,7 +246,8 @@ def plots(bundle, directory):
             positions, [f"{labels[r['config_id']]}\nn={r['n_reps']} reps" for r in rows]
         )
         axis.set_ylabel("tokens/s" if metric == "output_throughput" else "mean rep p95 E2E (ms)")
-        axis.set_title(bundle["experiment"]["name"] + " — " + metric + " (95% CI)")
+        scope = bundle.get("evidence", {}).get("kind", "unverified")
+        axis.set_title(bundle["experiment"]["name"] + " — " + metric + f" (95% CI; {scope})")
         axis.grid(axis="y", alpha=0.3)
         figure.tight_layout()
         path = directory / (metric + ".png")

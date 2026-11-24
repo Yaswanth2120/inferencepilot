@@ -26,6 +26,9 @@ def dispatch():
     run.add_argument("--lm-eval-bin", default="lm_eval")
     run.add_argument("--quality-limit", type=int)
     run.add_argument("--constraints")
+    run.add_argument(
+        "--evidence", choices=("unverified", "synthetic", "live"), default="unverified"
+    )
     for name in ("resume", "status", "analyze", "regress", "validate", "recommend", "report"):
         command = commands.add_parser(name)
         command.add_argument("--db", required=True)

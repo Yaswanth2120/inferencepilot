@@ -4,6 +4,11 @@ The offline implementation and a separate existing-server GPT-OSS performance ru
 are verified. The original v0.1.0 definition of finished is **not yet met**.
 No additional GPU work or rental-control action was performed for this audit.
 
+**GPU access is on hold by owner instruction.** Another project is using the rental.
+Do not connect to it, poll it, deploy to it, start GPU work, or stop its services
+until the owner explicitly authorizes access again. Subsequent fixes below were
+implemented and tested locally using fakes only.
+
 ## Verified evidence
 
 - PRs #10 and #11 are merged; all six Linux/macOS × Python 3.10/3.11/3.12 checks for
@@ -29,52 +34,50 @@ The full raw/DB/log archive is under the gitignored
 
 | Scope | Verified status | What remains | GPU needed? |
 |---|---|---|---|
-| M0–M8 | Implemented and tested offline | Resolve the live-readiness differences listed below; offline passing tests are not complete live validation | No for code fixes |
+| M0–M8 | Implemented and tested offline | Offline readiness differences fixed; validate them on hardware only after new authorization | No for code fixes |
 | M9 Qwen campaign | Scripts, resume tests and runbook prepared; campaign not run | Measured calibration; hardware probes; three independent baseline launches; OFAT/combined/eager runs; chat/RAG/prefix and open-loop data; quality/agreement; real A/A/MDE/corrected comparisons; constrained recommendation | Yes |
 | M9 fixtures | One real GPT-OSS vLLM 0.32 smoke fixture committed | Capture actual main-pipeline startup, detailed benchmark and harness fixtures for the chosen supported version; replace or document the provisional fixtures | GPU to capture missing evidence; local work afterward |
 | M10 optional GPT-OSS | Existing-server chat/RAG measurements at client concurrency 1/8/32 completed | Cold startup timing, controlled server restarts, context/OOM-boundary checks and actual batching-capable configurations were not measured | Yes if completing this optional scope |
-| M11 release | Six-job CI and project docs exist | Finish live evidence, resolve readiness gaps, finalize README/results/limitations, freeze schema, set release version and publish/tag v0.1.0 | No for packaging/docs; release depends on M9 |
+| M11 release | Six-job CI and project docs exist | Finish live evidence and final review; freeze schema, set release version and publish/tag v0.1.0 | No for packaging/docs; release depends on M9 |
 
 M10's original Qwen-first ordering was explicitly overridden by the owner for this
 one existing-server run. That does not silently remove the Qwen campaign from the
 project definition. The current package version is 0.0.1; no release tag exists.
 Unrun live paths are **not run (needs GPU)**.
 
-## Implementation differences found by inspection
+## Offline readiness fixes after the audit
 
-These were reported during the audit rather than silently fixed outside its scope:
-
-1. **Main report provenance is hard-coded.**
-   [`report.prepare`](../src/inferencepilot/report.py) always sets
-   `live="not run (needs GPU)"`. Before publishing a main-pipeline live report,
-   synthetic/live provenance must be represented and rendered accurately. The
-   GPT-OSS report uses a separate script and is not affected by this hard-coded field.
-2. **Main runner telemetry is incomplete.**
-   [`Runner.point`](../src/inferencepilot/runner.py) stores memory.used before/after
-   reps, but section 12 also requires clocks, power, temperature and utilization.
-   The separate GPT-OSS script captured those fields; that does not mean the main
-   Qwen runner currently does so.
-3. **Quality scheduling has a runtime-cost difference.**
-   The main runner executes quality for every successful launch. Section 9 normally
-   uses weight/precision changes plus baseline/combined checks. The conservative
-   repeat-every-launch policy is documented in DECISIONS.md, but its cost has not
-   been calibrated live. Reconcile the intended policy and budget before renting
-   for the full campaign; do not assume the 8–14-hour target is guaranteed.
-4. **Version validation is still separate.**
-   The main doctor/config pin is vLLM 0.15.1; the completed GPT-OSS run used 0.32.0
-   through the explicit existing-server path. That real fixture does not certify
-   the pinned Qwen lifecycle, all quantization paths or lm-eval compatibility.
-5. **Legacy wording needed cleanup.**
-   README/report-index/design text still contained blanket claims that no live
-   results existed. This audit corrects the documentation to distinguish the
-   completed GPT-OSS run from unrun main-pipeline work. Unused M0/M6 helper messages
-   also remain in env.py/plan_commands.py; the current CLI dispatches to the actual
-   runner/selftest, so those strings are cleanup items, not proof of missing features.
+1. **Report provenance fixed offline.** New runs save explicit `synthetic`, `live`
+   or `unverified` declarations in schema_meta. Legacy databases remain unverified;
+   neither a GPU name nor measured calibration establishes provenance. Reports and
+   plots carry the scope; failed live attempts do not claim successful measurements.
+   This is a recorded declaration, not independent hardware certification.
+2. **Main-runner telemetry implemented offline.** Before/after-rep sampling now
+   includes GPU memory, SM/memory clocks, power, temperature and utilization with a
+   timestamp. Unsupported values remain null, and failed queries retain errors.
+   The safety preflight is unchanged. The deadline is checked again after sampling.
+   Actual hardware behavior of this new path is not run (needs GPU).
+3. **Quality scheduling reconciled offline.** Successful GSM8K results are cached
+   per experiment/model/precision/seed/protocol, including subset, context and
+   harness version. Scheduling-only launches inherit named source evidence; they
+   are not independent new quality samples. Precision changes get a new evaluation,
+   and the combined candidate always has its own full-config scope. Success and its
+   cache pointer commit atomically; failed results are not reused. Agreement still
+   runs per launch. The six-launch fake test uses two measured evaluations plus four
+   inherited rows. Actual runtime/quality effects remain not run (needs GPU).
+4. **Version validation remains a live gate.** The main pin stays vLLM 0.15.1;
+   the completed existing-server run used 0.32.0. That separate real fixture does
+   not certify pinned Qwen lifecycle, quantization or harness compatibility.
+5. **Documentation/packaging readiness.** Stale no-live-results wording was corrected.
+   Unused M0/M6 helper messages remain nonblocking cleanup items; current CLI wiring
+   uses the actual runner/selftest. The 0.0.1 wheel is checked separately from an
+   editable checkout; no release version/tag is published before the live gates.
 
 ## Order of remaining work
 
-1. Offline: correct main-report provenance and telemetry; reconcile quality
-   scheduling/version policy; add focused tests. Keep unmeasured paths explicit.
+1. Offline fixes for provenance, telemetry and quality scheduling are implemented
+   with focused tests. Keep the main version pin unchanged until targeted live
+   compatibility testing is explicitly authorized.
 2. On a prepared GPU: run the required M9 design with measured calibration and
    actual probe evidence. Preserve replication and stop at the agreed budget.
 3. Locally: verify the archive, replace/document real fixtures, run the full
@@ -102,3 +105,13 @@ On 2026-11-24, a new clone of merged commit
 This verifies the offline quickstart with the report extra. It is not live model
 quality evidence or completion of the other M11 release gates. No additional tests
 or measurement-code changes were introduced by the documentation audit.
+
+## Verification of the offline readiness fixes
+
+With the rental left untouched, the local full suite passed **300 tests**, Ruff
+passed, and focused provenance/quality/telemetry checks passed. The CLI interruption/
+resume test also verified that an explicit synthetic declaration survives resume.
+A standard isolated pyproject build produced a 0.0.1 wheel; it was installed into
+a separate local environment without an editable path, and its full standalone
+selftest passed. Synthetic chart provenance labelling was visually checked.
+These checks do not authorize or substitute for new hardware validation.
