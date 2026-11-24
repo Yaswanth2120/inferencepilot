@@ -620,3 +620,21 @@ The captured base git SHA is supplemented by that hash manifest rather than bein
 misrepresented as the exact unmodified code checkout. The running template model
 server and rental were not stopped or destroyed. Model quality, independent-launch
 noise and context tuning remain outside this completed serving validation.
+
+### Post-run project audit
+
+The owner requested verification of remaining work. This audit recomputed all 36
+published aggregate rows from the archive and rechecked all 30 raw files, request/
+token counts and database integrity. It documents M9 as unrun, M10 as a completed
+performance subset with remaining optional startup/context checks, and M11 as
+release-pending. Main report provenance, main-runner telemetry and quality runtime
+policy differences are reported in docs/PROJECT_STATUS.md instead of silently
+fixing measurement code outside the audit scope. Stale blanket no-live-result
+wording is corrected, and the README adds the verified counted result table and
+architecture diagram. No rental lifecycle or additional GPU action is implied.
+
+The post-run audit also completed the clean-clone README quickstart in a new Python
+3.12 virtualenv with dev/report extras: 283 tests passed, Ruff passed and the
+standalone full selftest passed. This satisfies that specific offline release
+readiness check, not M11 as a whole or the unrun M9 evidence gates. No new tests
+were added for documentation-only changes.

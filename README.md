@@ -2,7 +2,7 @@
 
 Compare **tested** vLLM serving configurations using replicated server launches,
 rep-level statistics, paired quality checks, and constraint-based recommendations.
-**M0–M8 are implemented and verified offline. Real GPU results: not run (needs GPU).**
+**M0–M8 are implemented and verified offline. GPT-OSS live performance validation is complete; the required Qwen campaign remains unrun.**
 MIT licensed. Python 3.10–3.12. vLLM is invoked as a subprocess, never imported.
 
 ## Quickstart without a GPU
@@ -37,7 +37,8 @@ Use `venv/` here: this workspace hides `.venv` files and skips editable `.pth` s
 - [x] M8 constraint filtering, Pareto/ranking, persisted Markdown/JSON reports and plots.
 - [x] M9 handoff scripts/runbook prepared and tested **offline**.
 - [ ] M9 owner-run Qwen3 live campaign and replacement of provisional fixtures.
-- [ ] M10 optional GPT-OSS serving validation, gated on M9.
+- [x] Owner-selected GPT-OSS existing-server performance subset (30 reps, archived real results).
+- [ ] Remaining optional M10 startup/context/OOM-boundary validation.
 - [ ] M11 final release documentation and v0.1.0 release.
 
 Latest local verification and milestone counts are recorded below. GitHub requires
@@ -153,7 +154,7 @@ which can bundle tokens. If budget is tight, reduce scope explicitly; never sile
 lower replication standards or treat an underpowered result as no change.
 
 No multi-GPU serving, other engines, cloud rental orchestration, or web UI is built.
-M9 remains the live cost/time risk. **Live paths: not run (needs GPU).**
+M9 remains the live cost/time risk. **Unrun main-pipeline live paths: not run (needs GPU).**
 
 ## GPU handoff and project guides
 
@@ -199,3 +200,44 @@ GPT-OSS live validation completed: **30/30 reps**, **3,000 requests**, **108.4 m
 All raw files were rechecked locally and the archived DB passed integrity checks.
 [Final report](reports/gptoss-20261124/report.md) records the single-lifetime,
 max_num_seqs=1 queueing limitation; quality and the Qwen campaign remain unrun.
+
+## Verified live results and remaining work
+
+See [the project audit](docs/PROJECT_STATUS.md) for release blockers and the GPU/offline split.
+The following are observed means of rep-level statistics with 95% bootstrap CIs;
+each point has **5 reps of 100 requests** in **one existing server lifetime**.
+The server had **max_num_seqs=1**, so higher client concurrency measures queueing.
+
+| Workload | Client concurrency | Output tokens/s [95% CI] | Mean rep p95 E2E ms [95% CI] | n reps |
+|---|---:|---|---|---:|
+| chat | 1 | 162.98 [162.86, 163.06] | 1573.97 [1572.17, 1577.30] | 5 |
+| rag | 1 | 122.48 [122.42, 122.53] | 2099.42 [2098.10, 2101.16] | 5 |
+| chat | 8 | 163.31 [163.24, 163.38] | 12569.09 [12542.29, 12595.90] | 5 |
+| rag | 8 | 123.74 [123.70, 123.78] | 16590.67 [16576.76, 16606.69] | 5 |
+| chat | 32 | 163.30 [163.26, 163.34] | 50180.99 [50159.78, 50204.42] | 5 |
+| rag | 32 | 123.66 [123.65, 123.68] | 66362.15 [66333.44, 66393.70] | 5 |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    CLI --> Planner
+    Planner --> Runner
+    Runner --> ServerManager
+    Runner --> BenchAdapter
+    Runner --> Quality
+    BenchAdapter --> Store
+    Quality --> Store
+    Store --> Stats
+    Stats --> Regression
+    Regression --> Recommender
+    Recommender --> Report
+```
+
+The existing-server GPT-OSS path attaches to a running endpoint and bypasses server
+ownership; its single-lifetime results do not establish main-campaign regression
+power, paired model quality or optimized configurations.
+
+Fresh-clone audit (2026-11-24): new virtualenv install with `.[dev,report]`, **283
+tests passed**, Ruff passed, standalone selftest passed. M11's install/quickstart
+check is verified; the release remains gated on the pending work in the audit.
