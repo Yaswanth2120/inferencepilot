@@ -168,6 +168,20 @@ class Store:
                     tuple(values.values()),
                 )
 
+    def checkpoint_quality(self, key, **values):
+        """Commit measured quality and its reusable source identity atomically."""
+        values = {"id": uuid.uuid4().hex, **values}
+        self.rows("quality_results", **{k: None for k in values})
+        with self.connection:
+            self.connection.execute(
+                f"INSERT INTO quality_results ({','.join(values)}) VALUES ({','.join('?' for _ in values)})",
+                tuple(values.values()),
+            )
+            self.connection.execute(
+                "INSERT OR REPLACE INTO schema_meta VALUES (?,?)", (key, values["id"])
+            )
+        return values["id"]
+
 
 def latest_experiment_id(path):
     """Read a committed experiment identity without creating a database or migrating it."""

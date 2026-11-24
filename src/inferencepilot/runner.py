@@ -10,6 +10,7 @@ import signal
 import subprocess
 import time
 from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
 
 from inferencepilot import analysis, env, quality
 from inferencepilot.config import ConfigSpec, ExperimentPlan, LoadSpec, SLOSpec
@@ -21,6 +22,7 @@ from inferencepilot.store import encode
 
 @dataclass
 class Options:
+    evidence: str = "unverified"
     binary: str = "vllm"
     quality_binary: str = "lm_eval"
     quality_limit: int | None = None
@@ -55,6 +57,8 @@ class Runner:
         self.store = store
         self.options = options or Options()
         self.deadline = None
+        if self.options.evidence not in ("unverified", "synthetic", "live"):
+            raise ValueError("evidence must be unverified, synthetic or live")
 
     def remaining(self):
         seconds = self.deadline - time.time()
@@ -73,6 +77,16 @@ class Runner:
                 if not math.isfinite(cap) or cap <= 0:
                     raise ValueError("budget must be finite and positive")
                 experiment = self.store.create(plan, env.snapshot(), cap)
+                self.store.set_meta(
+                    "evidence:" + experiment,
+                    encode(
+                        {
+                            "kind": self.options.evidence,
+                            "declared_at": time.time(),
+                            "basis": "explicit runner option; not an independent certification",
+                        }
+                    ),
+                )
                 self.store.set_meta(
                     "options:" + experiment,
                     encode({k: v for k, v in asdict(self.options).items() if k != "timeouts"}),
@@ -216,10 +230,11 @@ class Runner:
             key = "rep:" + encode([experiment, slot, workload.name, params, index])
             if self.store.meta(key):
                 continue
-            timeout = self.remaining()
+            self.remaining()
             raw = self.store.artifact(identity + f"-{index}.json")
             started = time.time()
-            before = env.gpu_memory_used()
+            before = env.gpu_telemetry()
+            timeout = self.remaining()
             try:
                 thresholds = self.options.slos.get(workload.name)
                 slo = SLOSpec.model_validate(thresholds) if thresholds else None
@@ -247,56 +262,13 @@ class Runner:
                 started_at=started,
                 raw_path=str(raw),
                 gpu_before=encode(before),
-                gpu_after=encode(env.gpu_memory_used()),
+                gpu_after=encode(env.gpu_telemetry()),
                 **values,
             )
 
     def check_quality(self, experiment, launch_id, spec, config):
         self.remaining()
-        directory = self.store.artifact(launch_id + "-quality")
-        directory.mkdir(exist_ok=True)
-        try:
-            execute(
-                quality.quality_command(
-                    spec.model,
-                    spec.port,
-                    directory,
-                    limit=self.options.quality_limit,
-                    seed=spec.seed,
-                    binary=self.options.quality_binary,
-                ),
-                directory / "harness.log",
-                self.remaining(),
-            )
-            paths = list(directory.rglob("*samples*gsm8k*.jsonl"))
-            if len(paths) != 1:
-                raise ValueError("expected exactly one gsm8k sample log")
-            samples = quality.read_samples(paths[0], self.options.quality_limit or 1319)
-            metrics = {"status": "ok", "filters": quality.quality_summary(samples)}
-            baseline_key = "quality_baseline:" + experiment
-            baseline = self.store.meta(baseline_key)
-            if baseline:
-                metrics["paired"] = quality.paired_quality(quality.read_samples(baseline), samples)
-            elif config["role"] == "baseline":
-                self.store.set_meta(baseline_key, str(paths[0]))
-            self.store.insert(
-                "quality_results",
-                launch_id=launch_id,
-                task="gsm8k",
-                n=self.options.quality_limit or 1319,
-                metrics=encode(metrics),
-                samples_path=str(paths[0]),
-                created_at=time.time(),
-            )
-        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
-            self.store.insert(
-                "quality_results",
-                launch_id=launch_id,
-                task="gsm8k",
-                n=0,
-                metrics=encode({"status": "failed", "error": str(error)}),
-                created_at=time.time(),
-            )
+        self.evaluate_gsm8k(experiment, launch_id, spec, config)
         reference_key = "agreement_baseline:" + experiment
         reference = self.store.meta(reference_key)
         try:
@@ -328,6 +300,96 @@ class Runner:
                 task="agreement_error",
                 n=0,
                 metrics=encode({"status": "failed", "error": str(error)}),
+                created_at=time.time(),
+            )
+
+    def evaluate_gsm8k(self, experiment, launch_id, spec, config):
+        """Measure once per precision identity and combined candidate, retaining source lineage."""
+        key = (
+            "gsm8k:"
+            + experiment
+            + ":"
+            + quality.evaluation_key(spec, config["role"], config["id"], self.options.quality_limit)
+        )
+        source_id = self.store.meta(key)
+        baseline_key = "quality_baseline:" + experiment
+        baseline = self.store.meta(baseline_key)
+        if source_id and not baseline and config["role"] == "baseline":
+            source = self.store.rows("quality_results", id=source_id)[0]
+            source_launch = self.store.rows("launches", id=source["launch_id"])[0]
+            source_config = self.store.rows("configs", id=source_launch["config_id"])[0]
+            if source_config["role"] == "baseline" and Path(source["samples_path"]).is_file():
+                baseline = source["samples_path"]
+                self.store.set_meta(baseline_key, baseline)
+        if source_id and (config["role"] != "baseline" or baseline):
+            source = self.store.rows("quality_results", id=source_id)[0]
+            metrics = json.loads(source["metrics"])
+            if metrics.get("status") == "ok" and Path(source["samples_path"]).is_file():
+                if baseline and "paired" not in metrics:
+                    metrics["paired"] = quality.paired_quality(
+                        quality.read_samples(baseline), quality.read_samples(source["samples_path"])
+                    )
+                metrics.update(
+                    inherited=True,
+                    source_quality_id=source_id,
+                    source_launch_id=source["launch_id"],
+                    reuse_reason="same model/precision, seed and fixed quality protocol",
+                )
+                self.store.insert(
+                    "quality_results",
+                    launch_id=launch_id,
+                    task="gsm8k",
+                    n=source["n"],
+                    metrics=encode(metrics),
+                    samples_path=source["samples_path"],
+                    created_at=time.time(),
+                )
+                return
+        directory = self.store.artifact(launch_id + "-quality")
+        directory.mkdir(exist_ok=True)
+        try:
+            execute(
+                quality.quality_command(
+                    spec.model,
+                    spec.port,
+                    directory,
+                    limit=self.options.quality_limit,
+                    seed=spec.seed,
+                    binary=self.options.quality_binary,
+                ),
+                directory / "harness.log",
+                self.remaining(),
+            )
+            paths = list(directory.rglob("*samples*gsm8k*.jsonl"))
+            if len(paths) != 1:
+                raise ValueError("expected exactly one gsm8k sample log")
+            samples = quality.read_samples(paths[0], self.options.quality_limit or 1319)
+            metrics = {
+                "status": "ok",
+                "filters": quality.quality_summary(samples),
+                "inherited": False,
+                "source_launch_id": launch_id,
+            }
+            if baseline:
+                metrics["paired"] = quality.paired_quality(quality.read_samples(baseline), samples)
+            self.store.checkpoint_quality(
+                key,
+                launch_id=launch_id,
+                task="gsm8k",
+                n=self.options.quality_limit or 1319,
+                metrics=encode(metrics),
+                samples_path=str(paths[0]),
+                created_at=time.time(),
+            )
+            if not baseline and config["role"] == "baseline":
+                self.store.set_meta(baseline_key, str(paths[0]))
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            self.store.insert(
+                "quality_results",
+                launch_id=launch_id,
+                task="gsm8k",
+                n=0,
+                metrics=encode({"status": "failed", "inherited": False, "error": str(error)}),
                 created_at=time.time(),
             )
 

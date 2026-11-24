@@ -638,3 +638,44 @@ The post-run audit also completed the clean-clone README quickstart in a new Pyt
 standalone full selftest passed. This satisfies that specific offline release
 readiness check, not M11 as a whole or the unrun M9 evidence gates. No new tests
 were added for documentation-only changes.
+
+### Offline readiness fixes under an explicit GPU access hold
+
+The owner prohibited further GPU use while another project uses the rental.
+No SSH, rental polling, deployment or lifecycle operation is part of this work;
+all new execution tests use local fakes. No background result pull remained running.
+
+New main-runner experiments record an explicit evidence declaration in schema_meta,
+without changing the section-11 DDL/version. Default and legacy provenance is
+unverified; calibration source, GPU names, package presence and historical success
+never promote it to live. Future explicitly executed owner campaign wrappers declare
+live, while fake selftests declare synthetic. Report scope includes successful rep
+counts/status and is not independent hardware certification. Unrun paths retain
+not run (needs GPU) wording without falsely labelling every report offline.
+
+Main telemetry is now a timestamped six-field diagnostic sample. Unsupported N/A
+fields remain null and query/shape/range failures are visible, rather than invented
+zero measurements. Sampling failure alone does not invalidate benchmark latency;
+preflight/teardown safety checks remain separate. Remaining budget is rechecked
+after telemetry before any benchmark starts.
+
+Quality evaluation now follows the section-9 policy, replacing the earlier costly
+repeat-every-launch decision: successful GSM8K evidence is shared for unchanged
+weights/precision, seed, max context, fixed subset, harness version and protocol.
+KV precision changes require separate evidence; the combined config always has
+its own full-config key. Inherited rows retain source quality/launch IDs and file
+paths and are explicitly not independent new samples. Recommendation JSON carries
+that source. Agreement still checks every launch. The measured row/cache commit is
+atomic; failures are not cached; a first-baseline pointer can recover from its
+successful committed baseline source after interruption. Existing sample files
+must be preserved for pairing/resume. No new hardware-runtime or quality guarantee
+is inferred from this fake-tested optimization.
+
+Verification used 300 passing local tests plus focused CLI/protocol tests, Ruff,
+and the full selftest from an installed wheel in an isolated local environment.
+The standard isolated pyproject build succeeded; disabling build isolation initially
+failed because the development venv lacked setuptools, so that attempt was not
+counted as a package failure or a successful wheel test. The wheel selftest was
+rerun after actual wheel installation with imports confirmed from site-packages.
+No measurement formulas, existing archived results, package version, schema DDL or
+GPU software were changed. Physical validation remains not run (needs GPU).

@@ -137,6 +137,11 @@ def recommendation_inputs(records, aggregates, regressions, quality_filter="flex
                         n=paired["n"],
                         drop_pp=paired["drop_percentage_points"],
                         mcnemar_p=paired["mcnemar_p"],
+                        source={
+                            "inherited": metrics.get("inherited", False),
+                            "quality_id": metrics.get("source_quality_id", samples[-1]["id"]),
+                            "launch_id": metrics.get("source_launch_id", samples[-1]["launch_id"]),
+                        },
                     )
         relevant = [r for r in regressions if r["candidate_config_id"] == config["id"]]
         warnings = [

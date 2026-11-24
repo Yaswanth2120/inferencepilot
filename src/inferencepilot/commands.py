@@ -37,6 +37,7 @@ def run(args):
         identity = Runner(
             store,
             Options(
+                evidence=args.evidence,
                 binary=args.vllm_bin,
                 quality_binary=args.lm_eval_bin,
                 quality_limit=args.quality_limit,

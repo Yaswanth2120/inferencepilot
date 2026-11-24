@@ -79,7 +79,7 @@ that boundary only in some noisy trials. No thresholds were tuned to these resul
 inferencepilot plan --config configs/experiment_qwen3_8b.yaml --out data/plan.json
 inferencepilot run --plan data/plan.json --dry-run
 # On the prepared GPU host only, after probes and measured calibration:
-inferencepilot run --plan data/plan.json --db data/campaign.db --constraints configs/constraints.yaml
+inferencepilot run --plan data/plan.json --db data/campaign.db --constraints configs/constraints.yaml --evidence live
 inferencepilot status --db data/campaign.db --experiment ID
 inferencepilot resume --db data/campaign.db --experiment ID
 inferencepilot analyze --db data/campaign.db --experiment ID
@@ -241,3 +241,30 @@ power, paired model quality or optimized configurations.
 Fresh-clone audit (2026-11-24): new virtualenv install with `.[dev,report]`, **283
 tests passed**, Ruff passed, standalone selftest passed. M11's install/quickstart
 check is verified; the release remains gated on the pending work in the audit.
+
+## Offline readiness fixes and GPU hold
+
+GPU access is on hold until the owner explicitly authorizes it again. These changes
+were tested locally against fake tools; the rental is not contacted or modified.
+
+`run --evidence synthetic|live|unverified` records an explicit declaration. The
+default and legacy databases are unverified; no GPU name/calibration heuristic
+promotes them to live. The owner-run campaign wrappers declare live only when
+explicitly executed. A declaration is not independent verification or permission
+to run a GPU job. Reports distinguish successful measured reps from failed attempts.
+
+The main runner now samples memory, SM/memory clocks, power, temperature and
+utilization before/after each rep. Unsupported fields are null and query failures
+are explicit. Sampling does not replace the serving safety checks.
+
+GSM8K runs once per matching model/precision, seed, subset and protocol within an
+experiment, with a separate combined-candidate evaluation. Scheduling-only rows
+inherit named source evidence; do not sum their n as independent samples. Failed
+quality is never cached. Source identities propagate into recommendations, and
+agreement checks still run per launch. This replaces the earlier conservative
+repeat-every-launch policy. Hardware validation: **not run (needs GPU)**.
+
+Offline-fix verification: **300 tests passed**, Ruff passed, CLI provenance survived
+interrupt/resume, and a built wheel installed into an isolated environment passed
+the full selftest. No SSH or rental GPU access was used. Release remains blocked
+on the unrun live evidence; package version is still 0.0.1.

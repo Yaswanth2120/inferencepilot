@@ -226,3 +226,25 @@ The main Qwen version pin remains 0.15.1. The owner-selected installed server is
 pinned-version doctor or every provisional fixture. See the live validation note
 for checkpoint, archive and Supervisor paths. Stopping this benchmark does not stop
 the model server or rental billing.
+
+## Readiness update and current access hold
+
+The owner has reserved the rental for another project. Do not access or use it
+until explicit authorization is renewed. None of the offline tests require SSH
+or the rented GPU.
+
+Future direct campaign execution can declare `--evidence live`; run_campaign.sh
+and the detached supervisor add this declaration automatically for an explicitly
+started campaign. Direct runs default to unverified. Existing DBs without a
+saved declaration remain unverified rather than being relabelled from GPU/model
+metadata. Keep synthetic tests explicitly synthetic. Provenance declares origin;
+rep statuses and real archives establish which measurements succeeded.
+
+Full telemetry now records timestamped memory, clocks, power, temperature and
+utilization. Unsupported fields are null. GSM8K scheduling now shares successful
+model/precision/protocol evidence, while combined configurations are measured
+separately; rows and recommendations retain the source launch/quality ID. The
+reference sample files must remain available for paired comparisons and resume.
+Repeated baseline launches still provide independent performance observations,
+not additional independent GSM8K samples. Agreement checks continue per launch.
+Only offline fake coverage has verified these new paths so far.

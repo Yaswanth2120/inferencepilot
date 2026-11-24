@@ -225,6 +225,8 @@ class Supervisor:
             else:
                 arguments = [
                     "run",
+                    "--evidence",
+                    "live",
                     "--plan",
                     self.job["plan"],
                     "--db",
