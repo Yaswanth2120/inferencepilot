@@ -606,3 +606,17 @@ The owner explicitly supplied SSH access and instructed execution against the in
 A separate BenchmarkEndpoint type allows model-agnostic benchmark argv without weakening the Qwen ConfigSpec launch constraints. The separate existing-server script never starts or stops the external server. It records observation time explicitly rather than inventing startup time, checkpoints five reps per chat/RAG concurrency point at 1/8/32, uses a three-hour cap, and reports rep-level CIs with single-lifetime limitations. Version-specific help is checked before invocation; no Torch/vLLM upgrades or dependency replacements were made. A real three-request/four-output-token smoke fixture from vLLM 0.32 passed the raw-derived metric cross-check, including direct E2E latency consistency. It does not replace all provisional 0.15.1 fixtures or establish quality compatibility.
 
 Supervisor manages the new benchmark worker with autorestart disabled and persistent logs, leaving the existing template services alone. Dataset measurements are raw synthetic completions, not a chat-template/reasoning-quality evaluation. Independent launch noise, quality comparisons, 32k/64k/128k context and the Qwen campaign remain not run (needs GPU). Recorded live results are labelled as live, not as offline selftest evidence.
+
+### GPT-OSS validation completion
+
+The owner-selected existing-server run finished normally in 108.4 minutes: all 30
+reps and 3,000 requests passed fixed-length checks. The off-machine DB passed
+integrity_check; every archived raw file was independently re-parsed through the
+same adapter and metrics cross-check. The completed report preserves all five-rep
+point CIs and labels the actual max_num_seqs=1 serialization limitation. Provider
+instance label is redacted only in the public artifacts; original metadata, raw
+arrays, DB, logs and deployed-source hash manifest remain in the local archive.
+The captured base git SHA is supplemented by that hash manifest rather than being
+misrepresented as the exact unmodified code checkout. The running template model
+server and rental were not stopped or destroyed. Model quality, independent-launch
+noise and context tuning remain outside this completed serving validation.
