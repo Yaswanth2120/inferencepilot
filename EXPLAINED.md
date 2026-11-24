@@ -1075,3 +1075,21 @@ The campaign wrapper defaults to a dry run and checks measured calibration and p
 `main` wires start, status and the private worker entrypoint. The inherited lock stays open for the worker lifetime while user-facing errors retain exit code 2.
 
 `store.latest_experiment_id` performs the detached supervisor's read-only polling through the store boundary. It tolerates an uncreated/initializing database and explicitly closes each connection, avoiding descriptor leaks during long jobs.
+
+### Existing-server validation
+
+`BenchmarkEndpoint` validates only the explicit loopback model, port and context limit needed by a benchmark. It has no server argv or tuning fields, so accepting GPT-OSS here does not relax Qwen experiment-launch invariants.
+
+`scripts/benchmark_existing.py:endpoint` checks the current served model and advertised context through the model endpoint. Missing or unexpected identities fail before a benchmark can be labelled as that model.
+
+`telemetry` captures read-only clock, power, temperature, utilization and memory information around each rep. It keeps diagnostics alongside measured data without changing GPU state.
+
+`progress` atomically writes experiment identity and counted progress next to the DB. A reconnect can find the saved job without relying on chat context.
+
+`render` uses shared analysis/statistics for counted rep means and confidence intervals. It explicitly limits findings to one observed server lifetime and synthetic raw completions.
+
+`interrupt` converts stop signals into cleanup-aware interruption. The existing-server process is never signalled; only an owned benchmark subprocess is cleaned up.
+
+`run` executes and checkpoints the selected workload points, enforcing a persisted creation-time budget and checking every result through the existing adapter. Resume skips committed logical reps and rejects changed options rather than relabelling a different experiment.
+
+`main` validates the three-hour cap and acquires an exclusive external-campaign lock. This prevents duplicate benchmark workers from corrupting the intended load schedule.

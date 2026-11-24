@@ -197,3 +197,32 @@ When assistant usage is available again, return with the SSH details and state
 path. The assistant can reconnect, inspect status, fetch the DB/raw/report archive,
 and finish analysis if needed. A usage reset does not automatically wake an
 assistant or trigger a reconnection. No automatic rental shutdown is configured.
+
+## Owner-selected existing GPT-OSS server
+
+The 2026-11-24 owner instruction selected the installed GPT-OSS-120B model instead
+of the Qwen-first sequence. `scripts/benchmark_existing.py` is a separate read-only
+server-attachment workflow. It validates `/v1/models`, checks the installed bench
+flags, measures chat/RAG at client concurrency 1/8/32 with five reps and checkpoints
+raw results. It does not start/restart/stop the existing model service, change its
+context, or weaken the Qwen ConfigSpec model restrictions.
+
+```sh
+python scripts/benchmark_existing.py --db data/gptoss-20261124/experiment.db \
+  --model openai/gpt-oss-120b --port 18000 --hours 3 --prompts 100
+```
+
+Resume adds `--resume EXPERIMENT_ID` with unchanged arguments and retains the old
+deadline. Use a managed Supervisor job on the current Vast image for independent
+execution; autorestart must stay disabled to avoid uncontrolled benchmark retries.
+Capture the existing startup log separately and never relabel observation time as
+startup time. Report one physical server lifetime, unknown startup duration and
+untested context limits explicitly. A pre-existing max_num_seqs=1 means client
+concurrency 8/32 measures serialization/queueing, not useful batching. Raising this
+or testing larger context requires a separately authorized server restart.
+
+The main Qwen version pin remains 0.15.1. The owner-selected installed server is
+0.32.0, with its own real fixture; successful measurement here is not a pass for the
+pinned-version doctor or every provisional fixture. See the live validation note
+for checkpoint, archive and Supervisor paths. Stopping this benchmark does not stop
+the model server or rental billing.
