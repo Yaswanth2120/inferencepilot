@@ -2,8 +2,9 @@
 
 InferencePilot wraps pinned vLLM tooling rather than implementing another load
 generator. It compares **tested** configurations with measured noise, paired
-quality and an explicit constraint policy. GPU and parser compatibility remain
-unverified until the owner supplies M9 evidence.
+quality and an explicit constraint policy. The main pinned Qwen lifecycle and
+quality paths remain unverified live. A separate existing-server GPT-OSS path has
+real benchmark evidence; see [the project audit](PROJECT_STATUS.md).
 
 ## Data and execution
 
@@ -80,5 +81,7 @@ a runner subprocess and verify checkpoint identities and seeds after resume.
 Power uses seeded fake HTTP timing responses and reports actual detection counts;
 it is a simulated timing-model result, not a GPU claim. The campaign wrapper,
 calibration helper and WAL-safe backup script are prepared and tested offline.
-The owner follows [RUNBOOK_GPU.md](RUNBOOK_GPU.md) for M9; real fixtures and live
-findings are **not run (needs GPU)**. M10/M11 and the release tag remain separate gates.
+The owner follows [RUNBOOK_GPU.md](RUNBOOK_GPU.md) for M9; the remaining
+main-pipeline live paths are **not run (needs GPU)**. The owner-selected GPT-OSS
+existing-server subset is complete with a real fixture and archived report.
+Remaining optional M10 scope, M11 and the release tag remain separate gates.

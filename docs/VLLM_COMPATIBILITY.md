@@ -58,4 +58,6 @@ output_tokens-1. Required numeric fields and arrays are validated strictly;
 unused metadata is ignored rather than treated as another timing authority.
 The command explicitly enables E2E summaries because the generative default
 percentile list omits E2E. Warmups are unmeasured and do not appear in arrays.
-All implementation/fixture compatibility remains provisional until M9 real output.
+Main-pipeline vLLM 0.15.1 compatibility remains provisional until M9 evidence.
+A separate GPT-OSS vLLM 0.32.0 raw-completion fixture and 30-rep serving run were
+verified on 2026-11-24; this does not certify the pinned lifecycle or quality path.
