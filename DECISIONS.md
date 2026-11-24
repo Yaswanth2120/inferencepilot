@@ -598,3 +598,11 @@ credentials, rental shutdown, reboot recovery or automatic assistant wake-up are
 implied. Live execution is not run (needs GPU); process detachment, deadline aborts,
 terminal statuses and report-stage continuation are tested using an explicitly fake
 CLI, in addition to the existing full fake campaign tests.
+
+### 2026-11-24 — owner-selected GPT-OSS live validation
+
+The owner explicitly supplied SSH access and instructed execution against the installed GPT-OSS-120B model. This supersedes the offline-only session restriction and Qwen-first gate for this specific serving validation; it does not mark M9 Qwen complete. The actual host has one A100-SXM4-80GB, vLLM 0.32.0, Torch 2.13.0+cu130, an existing GPT-OSS MXFP4 server using Triton attention and Marlin MoE, and an advertised 8192-token context. Its startup log reports max_num_seqs=1. Client concurrency 8/32 therefore measures queueing behind a serialized server, not effective batching. No server restart, context-limit search or configuration-speedup claim is authorized or inferred.
+
+A separate BenchmarkEndpoint type allows model-agnostic benchmark argv without weakening the Qwen ConfigSpec launch constraints. The separate existing-server script never starts or stops the external server. It records observation time explicitly rather than inventing startup time, checkpoints five reps per chat/RAG concurrency point at 1/8/32, uses a three-hour cap, and reports rep-level CIs with single-lifetime limitations. Version-specific help is checked before invocation; no Torch/vLLM upgrades or dependency replacements were made. A real three-request/four-output-token smoke fixture from vLLM 0.32 passed the raw-derived metric cross-check, including direct E2E latency consistency. It does not replace all provisional 0.15.1 fixtures or establish quality compatibility.
+
+Supervisor manages the new benchmark worker with autorestart disabled and persistent logs, leaving the existing template services alone. Dataset measurements are raw synthetic completions, not a chat-template/reasoning-quality evaluation. Independent launch noise, quality comparisons, 32k/64k/128k context and the Qwen campaign remain not run (needs GPU). Recorded live results are labelled as live, not as offline selftest evidence.

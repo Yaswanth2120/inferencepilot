@@ -216,3 +216,12 @@ class SLOSpec(Spec):
     ttft_ms: float = Field(ge=0, strict=True)
     tpot_ms: float = Field(ge=0, strict=True)
     e2e_ms: float = Field(ge=0, strict=True)
+
+
+class BenchmarkEndpoint(Spec):
+    """An existing loopback server; confers no ownership or server-launch capability."""
+
+    model: str = Field(min_length=1)
+    host: Literal["127.0.0.1"] = "127.0.0.1"
+    port: int = Field(ge=1024, le=65535)
+    max_model_len: int = Field(gt=0)

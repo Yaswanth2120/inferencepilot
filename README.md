@@ -188,3 +188,9 @@ reconnect an assistant automatically. Live: not run (needs GPU).
 Detached-automation verification: full offline suite **278 passed**, plus **4 passed**
 in the final focused suite (overlapping coverage, including final WAL-safe backup).
 Ruff passed. No rental host was contacted and live execution is not run (needs GPU).
+
+On 2026-11-24 the owner selected the already running GPT-OSS-120B server for a
+separate live validation. The real vLLM 0.32.0 smoke result passed adapter cross-checks;
+its fixture is tested offline. The larger benchmark is tracked in
+[the live validation note](reports/gptoss-20261124/README.md). This does not complete
+the pinned Qwen campaign. Local verification: **283 passed**, Ruff passed.

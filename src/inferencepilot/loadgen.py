@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from inferencepilot.config import ConfigSpec, LoadSpec, SLOSpec, WorkloadSpec
+from inferencepilot.config import BenchmarkEndpoint, ConfigSpec, LoadSpec, SLOSpec, WorkloadSpec
 from inferencepilot.vllm_flags import BENCH_FLAGS
 
 NonnegativeFloat = Annotated[float, Field(ge=0)]
@@ -72,7 +72,9 @@ class BenchmarkResult:
 
 def build_command(config, workload, load, seed, result_path, binary="vllm", slo=None):
     """Build fixed-length streaming benchmark argv without running or writing anything."""
-    config = ConfigSpec.model_validate(config.model_dump())
+    config = (
+        BenchmarkEndpoint if isinstance(config, BenchmarkEndpoint) else ConfigSpec
+    ).model_validate(config.model_dump())
     workload = WorkloadSpec.model_validate(workload.model_dump())
     load = LoadSpec.model_validate(load.model_dump())
     if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed <= 2**32 - 1:

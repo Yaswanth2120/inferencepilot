@@ -159,3 +159,26 @@ def test_invalid_result_is_adapter_broken(worked_raw, change):
 def test_invalid_slo_thresholds(value):
     with pytest.raises(ValidationError):
         SLOSpec(ttft_ms=value, tpot_ms=100, e2e_ms=1000)
+
+
+def test_existing_endpoint_preserves_qwen_launch_validation(tmp_path):
+    from inferencepilot.config import BenchmarkEndpoint, ConfigSpec, LoadSpec, WorkloadSpec
+
+    endpoint = BenchmarkEndpoint(model="openai/gpt-oss-120b", port=18000, max_model_len=8192)
+    workload = WorkloadSpec(
+        name="chat",
+        dataset="random",
+        input_tokens=256,
+        output_tokens=256,
+        concurrency=[1],
+        num_prompts=100,
+    )
+    command = build_command(endpoint, workload, LoadSpec(concurrency=1), 42, tmp_path / "real.json")
+    assert command[command.index("--model") + 1] == "openai/gpt-oss-120b"
+    assert command[command.index("--port") + 1] == "18000"
+    with pytest.raises(ValueError):
+        ConfigSpec(model="openai/gpt-oss-120b")
+    with pytest.raises(ValueError):
+        BenchmarkEndpoint(
+            model="openai/gpt-oss-120b", port=18000, max_model_len=8192, enforce_eager=True
+        )
