@@ -174,13 +174,13 @@ def markdown(bundle):
             "",
             "## Greedy token agreement",
             "",
-            "| Config | Exact match rate (n prompts) | Mean first divergent token position |",
+            "| Config / launch (reference launch) | Exact match rate (n prompts) | Mean first divergent token position |",
             "|---|---|---|",
         ]
     )
     for row in records["agreement"]:
         lines.append(
-            f"| {labels[launches[row['launch_id']]['config_id']]} | {number(row['exact_match_rate'], row['n'])} | {row['mean_first_divergence']} |"
+            f"| {labels[launches[row['launch_id']]['config_id']]} / {row['launch_id']} (reference {row['reference_launch_id']}) | {number(row['exact_match_rate'], row['n'])} | {row['mean_first_divergence']} |"
         )
     lines.extend(
         [

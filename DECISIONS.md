@@ -550,7 +550,7 @@ Live harness/vLLM paths: not run (needs GPU).
 
 The owner explicitly requested sequential milestones through M8, overriding the usual one-milestone session limit. The section 11 DDL is copied verbatim, with schema version 1 in schema_meta; execution checkpoints also use schema_meta rather than changing the contract. A database lock excludes concurrent runners. A rep and its logical checkpoint commit atomically, so an interrupted slot starts a new physical server lifetime while completed logical reps remain attached to their original launches. SIGTERM/SIGINT clean up owned processes; SIGKILL cannot promise cleanup and foreign processes are never adopted or killed.
 
-The wall-clock cap starts at experiment creation and includes paused time; resume does not replenish it. Server startup failures are recorded and the schedule continues. The combined configuration chooses improved individual levels by maximum observed closed-loop chat output throughput and receives its own validation launch; equal scores keep the baseline level. The baseline's first measured closed-loop chat sweep fixes all open-loop arrival rates; these additional points were explicitly excluded from the original estimate. Quality is conservatively rerun for each physical completed launch, including scheduling-only configurations; failed evidence remains explicit and will disqualify a recommendation. Small quality subsets and fewer agreement prompts exist only in explicit synthetic selftests, never the default live run.
+The wall-clock cap starts at experiment creation and includes paused time; resume does not replenish it. Server startup failures are recorded and the schedule continues. The combined configuration chooses improved individual levels by maximum observed closed-loop chat output throughput and receives its own validation launch; equal scores keep the baseline level. The baseline's first measured closed-loop chat sweep fixes all open-loop arrival rates; these additional points were explicitly excluded from the original estimate. [Superseded by the section-9 quality reuse policy below.] Quality was conservatively rerun for each physical completed launch, including scheduling-only configurations; failed evidence remains explicit and will disqualify a recommendation. Small quality subsets and fewer agreement prompts exist only in explicit synthetic selftests, never the default live run.
 
 The selftest command intentionally replaces the M0 stub with a full fake subprocess campaign; its original assertion was updated to the new success message. Fake benchmark timing was separated from FastAPI imports to avoid starting an HTTP framework for every synthetic benchmark. Analysis-owned regression/recommendation tables are initialized here and populated by M7/M8, rather than inserting placeholder conclusions in M6. No GPU or real vLLM was run.
 
@@ -716,15 +716,17 @@ first-200 quality, omit closed-loop chat concurrency 1) is available, but does n
 meet the original full-point M9 scope. No budget increase or reduced scope is
 assumed from silence; the owner was asked to choose among the three saved plans.
 
-### Approved M9 execution budget
+### M9 execution budget interpretation
 
 After recommending the 22-hour-cap plan (all performance points, fixed first-200
-GSM8K subset, 20.89-hour estimate), the owner replied "no go ahead". Proceed with
-that concrete recommendation: preserve every performance point and all five reps,
-retain the AWQ/BF16 failure, and use the same first-200 quality protocol throughout.
+GSM8K subset, 20.89-hour estimate), the owner replied "no go ahead". This was
+interpreted at the time as permission to proceed with that recommendation; the
+wording is ambiguous and is not an unambiguous confirmation of the higher cap.
+The campaign proceeded under that interpretation: preserve every performance
+point and all five reps, retain the AWQ/BF16 failure, and use the same first-200 quality protocol throughout.
 The detached worker has a 22-hour workflow deadline; local ten-minute backups were
 extended to 26 hours with idle-sleep prevention while the monitor is alive. Neither
-deadline stops rental billing. This approval does not extend to rental destruction.
+deadline stops rental billing. That interpretation did not extend to rental destruction.
 
 ### README result and progress images
 
@@ -792,3 +794,20 @@ The candidate build exposed setuptools' deprecated table-style license metadata,
 with support ending in February 2027. Use the existing build dependency at >=77
 and SPDX `MIT` plus an explicit LICENSE file. This adds no runtime dependency and
 keeps the same license while avoiding an imminent build-metadata incompatibility.
+
+
+### Post-release reporting corrections
+
+Preserve the v0.1.0 tag and measurements. Report eager's 178/200 agreement as an
+observed BF16 deviation; a numerical-kernel explanation is unverified. Report the
+measured prefix regressions without attributing the combined candidate's entire
+effect to one factor. Figure winner, SLO, overlap wording and replication counts
+come from stored report evidence; dated workload/config labels remain campaign-specific.
+Campaign hashes cover public Markdown/JSON/plots, with the pre-redaction source
+identified separately. Historical test counts remain historical, not overwritten.
+
+CI installs the approved report extra so the figure regression test runs in every
+matrix job instead of being skipped for a missing optional plotting dependency.
+
+Follow-up validation: 319 offline tests passed in 156.36 seconds, Ruff passed,
+and the standalone synthetic selftest passed. Live paths: not run (needs GPU).

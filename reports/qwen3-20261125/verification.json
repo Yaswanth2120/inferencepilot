@@ -51,5 +51,20 @@
     "focused_report_test": "1 passed",
     "plots": "rendered and visually reviewed",
     "optional_unrun": "GPT-OSS cold-start/context checks: not run (needs GPU)"
-  }
+  },
+  "original_report_file": "data/live/qwen3-20261124/archive/campaign/data/job/reports/report.json (local pre-redaction archive; not distributed)",
+  "public_artifact_sha256": {
+    "reports/qwen3-20261125/report.json": "0b03f168699b155d08aaa6ae294a912a77f7f1fd2166e4dc222e3e9a52b802b8",
+    "reports/qwen3-20261125/report.md": "11e7b9d48e2662bc65b62151864915f9db7f9980b6c16b42b067a14885dd2f14",
+    "reports/qwen3-20261125/README.md": "3bcc5d5bc0dcc8a036f55708c7e3d506889fc65b03591cf7b29bfc0a5d48206d",
+    "reports/qwen3-20261125/output_throughput.png": "54a156523423088ab9cf74e30cf6eb5deb727000b42c0a71567532567cdf6e94",
+    "reports/qwen3-20261125/p95_e2e.png": "3a0c1bc4e7e41fc2ed7d405ba74655a5f3e3b11ed08dbd89620907615a9e08a9",
+    "reports/readme/campaign-progress.png": "f48a935347d099d4ca9b6745aa489be16098ce5d56c80835dfa4f93edebd9c0e",
+    "reports/readme/gptoss-results.png": "96d7d7ec68e624f7fd225334626bf96c6146cd6b0a8ae9429756dc1310e28a48",
+    "reports/readme/qwen-performance.png": "ff4b1ab870297f4ce4ba533ca97367fd5453ab6caec10fa718384fca62afd519",
+    "reports/readme/qwen-quality.png": "1547e0abd6d670fa59ba9c62c3fad84a2520be5984b73fb24f2408d8bb8d1f07",
+    "reports/readme/qwen-regressions.png": "bddfca3fecdbdaee6ca061f0d30b59cb18baec6341122c3a1dddb935feb0e060",
+    "reports/readme/progress.json": "d2e9dd358d6dd05cfd404d4c9f3b42dc789fb592b7a7c77a0d85f1b69db60e2a"
+  },
+  "followup_scope": "Post-v0.1.0 presentation corrections; report.json and saved measurements unchanged. Historical publication_checks retained."
 }

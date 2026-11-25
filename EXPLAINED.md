@@ -1143,3 +1143,10 @@ The runner now persists evidence declarations and full telemetry, and the report
 `cli.dispatch` now exposes the package version through argparse's standard version action. It exits before requiring a subcommand, so an installed artifact can identify itself without loading a model.
 
 `test_released_schema_v1_snapshot` compares the active DDL with the released SQL snapshot and its fixed SHA-256. This guards the storage contract against accidental drift when package versions change.
+
+
+### Post-release figure replication caption
+
+`replication_caption` reads the distinct rep/launch counts from stored aggregates
+and groups them by baseline versus candidate. It lists heterogeneous counts rather
+than silently claiming every candidate has the same replication.

@@ -132,31 +132,39 @@ def plot_progress(source, destination):
     plt.close(fig)
 
 
+def replication_caption(data):
+    """Describe observed rep/launch counts without assuming equal candidate replication."""
+    baseline = {c["id"] for c in data["records"]["configs"] if c["role"] == "baseline"}
+    parts = []
+    for name, is_baseline in (("Baseline", True), ("Candidates", False)):
+        counts = sorted(
+            {
+                (row["n_reps"], row["n_launches"])
+                for row in data["aggregates"]
+                if (row["config_id"] in baseline) == is_baseline
+            }
+        )
+        sizes = ", ".join(f"{reps} reps / {launches} launches" for reps, launches in counts)
+        parts.append(f"{name}: {sizes or 'no measured aggregates'}")
+    return "; ".join(parts)
+
+
 def plot_qwen_performance(data, destination):
-    """Plot saved chat@32 means and CIs alongside the fixed TTFT constraint."""
+    """Plot saved objective-point means and CIs alongside its saved TTFT constraint."""
     labels = {c["id"]: c["label"] for c in data["records"]["configs"]}
-    order = [
-        "baseline",
-        "max_num_batched_tokens-2048",
-        "max_num_batched_tokens-16384",
-        "max_num_seqs-64",
-        "prefix_caching-false",
-        "weights-fp8_online",
-        "weights-fp8_ckpt",
-        "combined",
-        "seeded-eager",
-    ]
-    short = [
-        "BF16 baseline",
-        "Token budget 2048",
-        "Token budget 16384",
-        "Sequence cap 64",
-        "Prefix caching off",
-        "Online FP8",
-        "FP8 checkpoint",
-        "Combined",
-        "Eager regression",
-    ]
+    recommendation = data["recommendation"]
+    chosen = recommendation["chosen_config_id"]
+    point = recommendation["constraints"]["objective"]["point"]
+    threshold = recommendation["constraints"]["points"].get(point, {}).get("p95_ttft")
+    measured = {
+        r["config_id"]
+        for r in data["aggregates"]
+        if r["point"] == point and r["metric"] == "output_throughput"
+    }
+    order = [c["label"] for c in data["records"]["configs"] if c["id"] in measured]
+    short = order
+    if chosen is not None and chosen not in measured:
+        raise ValueError("chosen configuration lacks objective-point measurements")
     fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
     for axis, metric, title, unit in (
         (axes[0], "output_throughput", "Output throughput", "Output tokens / second"),
@@ -165,7 +173,7 @@ def plot_qwen_performance(data, destination):
         rows = {
             labels[r["config_id"]]: r
             for r in data["aggregates"]
-            if r["point"] == "chat:closed:32" and r["metric"] == metric
+            if r["point"] == point and r["metric"] == metric
         }
         for y, label in enumerate(order):
             row = rows[label]
@@ -173,7 +181,7 @@ def plot_qwen_performance(data, destination):
                 raise ValueError("Qwen plot requires at least five comparable reps")
             color = (
                 "#0f766e"
-                if label == "max_num_batched_tokens-2048"
+                if row["config_id"] == chosen
                 else "#c2410c"
                 if label == "seeded-eager"
                 else "#2563eb"
@@ -193,17 +201,34 @@ def plot_qwen_performance(data, destination):
         axis.grid(axis="x", alpha=0.2)
         axis.spines[["top", "right"]].set_visible(False)
     axes[0].invert_yaxis()
-    axes[1].axvline(500, color="#c2410c", linestyle="--", alpha=0.7, label="500 ms SLO")
-    axes[1].legend(frameon=False, loc="lower right")
+    if threshold is not None:
+        axes[1].axvline(
+            threshold, color="#c2410c", linestyle="--", alpha=0.7, label=f"{threshold:g} ms SLO"
+        )
+        axes[1].legend(frameon=False, loc="lower right")
+    chosen_rows = [
+        r
+        for r in data["aggregates"]
+        if r["config_id"] == chosen and r["point"] == point and r["metric"] == "p95_ttft"
+    ]
+    note = "No configuration satisfies the saved constraints."
+    if chosen is not None:
+        note = "Green: best tested configuration under mean-of-rep SLO policy."
+        if threshold is not None and chosen_rows:
+            row = chosen_rows[0]
+            relation = (
+                "overlaps" if row["ci_low"] <= threshold <= row["ci_high"] else "does not overlap"
+            )
+            note += f" Its TTFT CI {relation} {threshold:g} ms."
     fig.suptitle(
-        "Qwen3-8B · measured capacity and latency at chat concurrency 32",
+        f"Qwen3-8B · measured capacity and latency at {point}",
         fontsize=15,
         fontweight="bold",
     )
     fig.text(
         0.5,
         0.025,
-        "95% rep-bootstrap CIs · baseline n=15 reps / 3 launches; candidates n=5 / 1 launch\nGreen: best tested configuration under mean-of-rep SLO policy. Its TTFT CI overlaps 500 ms.",
+        f"95% rep-bootstrap CIs · {replication_caption(data)}\n{note}",
         ha="center",
         fontsize=9,
         color="#475569",
@@ -274,16 +299,9 @@ def plot_qwen_regressions(data, destination):
     from collections import Counter
 
     labels = {r["id"]: r["label"] for r in data["records"]["configs"]}
-    order = [
-        "max_num_batched_tokens-2048",
-        "max_num_batched_tokens-16384",
-        "max_num_seqs-64",
-        "prefix_caching-false",
-        "weights-fp8_online",
-        "weights-fp8_ckpt",
-        "combined",
-        "seeded-eager",
-    ]
+    measured = {r["config_id"] for r in data["aggregates"]}
+    compared = {r["candidate_config_id"] for r in data["regressions"]} & measured
+    order = [c["label"] for c in data["records"]["configs"] if c["id"] in compared]
     counts = {
         label: Counter(
             r["verdict"] for r in data["regressions"] if labels[r["candidate_config_id"]] == label
@@ -316,7 +334,7 @@ def plot_qwen_regressions(data, destination):
     fig.text(
         0.5,
         0.025,
-        f"Baseline n=15 reps / 3 launches; candidates n=5 / 1 launch · inconclusive includes MDE gates\nA/A: {validation['false_positives']}/{validation['n_tests']} false positives ({validation['false_positive_rate']:.1%}); overlapping splits, descriptive rate. AWQ untested and omitted.",
+        f"{replication_caption(data)} · inconclusive includes MDE gates\nA/A: {validation['false_positives']}/{validation['n_tests']} false positives ({validation['false_positive_rate']:.1%}); overlapping splits, descriptive rate. Only configurations with stored comparisons shown.",
         ha="center",
         fontsize=9,
         color="#475569",
