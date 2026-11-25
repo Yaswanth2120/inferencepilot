@@ -1,0 +1,13 @@
+{
+  "scope": "Qwen3-8B campaign progress snapshot; not final performance results",
+  "source": "Read-only campaign SQLite counts and detached job status",
+  "snapshot_unix": 1795611993.6104772,
+  "phase": "campaign",
+  "planned_reps": 605,
+  "valid_reps": 379,
+  "failed_reps": 0,
+  "planned_launches": 11,
+  "finished_launches": 6,
+  "elapsed_hours": 11.252040444744958,
+  "cap_hours": 22
+}
