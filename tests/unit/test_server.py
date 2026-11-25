@@ -36,6 +36,24 @@ def test_resolved_config_provisional_fixture():
     }
 
 
+def test_resolved_config_real_qwen_pinned_startup():
+    path = Path(__file__).resolve().parents[1] / "fixtures/real/qwen3_vllm_0151_startup.log"
+    resolved = parse_resolved_config(path.read_text())
+    assert resolved["max_model_len"] == 8192
+    assert resolved["prefix_caching"] is True
+    assert resolved["chunked_prefill"] is True
+    assert resolved["max_num_batched_tokens"] == 8192
+    assert resolved["quantization"] is None
+    assert resolved["kv_cache_dtype"] == "auto"
+    assert resolved["enforce_eager"] is False
+    assert resolved["cuda_graph_mode"] == "FULL_AND_PIECEWISE"
+    assert resolved["attention_backend"] == "FLASH_ATTN"
+    assert resolved["kv_cache_tokens"] == 397344
+    assert resolved["max_concurrency_tokens_per_request"] == 8192
+    assert resolved["max_concurrency"] == 48.5
+    assert resolved["raw_matched_lines"]
+
+
 def test_log_overrides_unknown_fields_and_ansi():
     raw = "\x1b[32menable_prefix_caching=True, chunked_prefill_enabled=True\x1b[0m"
     resolved = parse_resolved_config(

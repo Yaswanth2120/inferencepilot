@@ -1,4 +1,5 @@
 import copy
+import gzip
 import json
 from pathlib import Path
 
@@ -7,8 +8,22 @@ from pydantic import ValidationError
 
 from inferencepilot.config import ConfigSpec, ExperimentSpec, LoadSpec, SLOSpec
 from inferencepilot.loadgen import AdapterBrokenError, build_command, parse_result
+from inferencepilot.metrics import summarize
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/provisional"
+
+
+def test_real_pinned_qwen_detailed_benchmark():
+    path = FIXTURES.parent / "real/qwen3_vllm_0151_prefix64.json.gz"
+    raw = json.loads(gzip.decompress(path.read_bytes()))
+    result = parse_result(raw)
+    metrics = summarize(result, expected_output_tokens=128)
+    assert metrics.can_compare
+    assert len(result.requests) == 200
+    assert result.tool_summary["completed"] == 200
+    assert result.tool_summary["failed"] == 0
+    assert result.tool_summary["total_output_tokens"] == 25600
+    assert result.duration_s == pytest.approx(8.514475831994787)
 
 
 @pytest.fixture

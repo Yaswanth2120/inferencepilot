@@ -34,6 +34,7 @@ import time
 from pathlib import Path
 args = sys.argv[1:]
 if args[0] == 'run':
+    Path(sys.argv[0]).with_suffix('.run.json').write_text(json.dumps(args))
     db = sqlite3.connect(args[args.index('--db') + 1])
     db.execute('CREATE TABLE experiments (id TEXT, created_at REAL, status TEXT)')
     db.execute("INSERT INTO experiments VALUES ('synthetic-id', 1, 'running')")
@@ -121,6 +122,15 @@ def test_independent_runtime_guard(tmp_path):
     assert "runtime exhausted" in state["error"]
     assert "report" not in state["stages"]
     assert "does not stop or destroy" in state["billing"]
+
+
+def test_detached_quality_subset_is_passed_to_runner(tmp_path):
+    directory, _ = launch(tmp_path, extra=("--quality-limit", "200"))
+    state = wait_terminal(directory)
+    assert state["phase"] == "completed"
+    arguments = json.loads((tmp_path / "fake-cli.run.json").read_text())
+    assert arguments[arguments.index("--quality-limit") + 1] == "200"
+    assert json.loads((directory / "job.json").read_text())["quality_limit"] == 200
 
 
 def test_refuses_synthetic_and_existing_state(tmp_path):

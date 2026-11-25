@@ -236,6 +236,8 @@ class Supervisor:
                     "--max-gpu-hours",
                     str(self.job["max_hours"]),
                 ]
+                if self.job.get("quality_limit") is not None:
+                    arguments.extend(["--quality-limit", str(self.job["quality_limit"])])
             self.stage("campaign", arguments)
             identity = self.state["experiment"]
             if identity is None:
@@ -273,6 +275,7 @@ def main():
     launch.add_argument("--constraints", default=str(ROOT / "configs/constraints.yaml"))
     launch.add_argument("--max-hours", type=float, required=True)
     launch.add_argument("--resume")
+    launch.add_argument("--quality-limit", type=int, choices=range(1, 1320))
     launch.add_argument("--backup-to")
     launch.add_argument("--backup-seconds", type=int, default=3600)
     launch.add_argument("--cli", default=str(Path(sys.executable).parent / "inferencepilot"))

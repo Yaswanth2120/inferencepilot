@@ -1107,3 +1107,11 @@ The campaign wrapper defaults to a dry run and checks measured calibration and p
 `report.evidence_scope` turns an explicit declaration and rep statuses into an accurate report label. It treats legacy provenance as unverified and avoids claiming successful live execution when no valid rep exists.
 
 The runner now persists evidence declarations and full telemetry, and the report/recommender carry inherited quality source IDs. These changes retain the original statistical computations and make evidence reuse visible rather than silently increasing the apparent sample count.
+
+### M9 pre-campaign pilot
+
+`scripts/live_pilot.py:pilot` checks two greedy token-ID responses and a fixed first-N GSM8K subset against one owned baseline server. It saves timings, parsed quality, outputs and launch evidence, and always tears down its server so a broken quality path is found before the long campaign.
+
+`scripts/live_pilot.py:main` parses the configuration and fresh artifact directory, then runs the pilot. Its SIGTERM handler allows normal owned-server cleanup when the supervising job is stopped.
+
+`detached_campaign.Supervisor.run` now forwards an optional fixed quality subset to the runner. The runner persists that first-N protocol for resume and paired evaluation; omitting the option retains the full test split.

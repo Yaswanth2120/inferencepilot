@@ -679,3 +679,49 @@ counted as a package failure or a successful wheel test. The wheel selftest was
 rerun after actual wheel installation with imports confirmed from site-packages.
 No measurement formulas, existing archived results, package version, schema DDL or
 GPU software were changed. Physical validation remains not run (needs GPU).
+
+### M9 isolated live commissioning (2026-11-24)
+
+The owner explicitly reauthorized GPU work after the earlier hold. Use a separate
+checkout (`/workspace/inferencepilot-m9`) and virtualenv (`/venv/inferencepilot-m9`)
+with the existing pinned vLLM 0.15.1 and harness 0.4.9.2; preserve the other project's
+vLLM/Torch environment and model cache. The hardware doctor passed. Port 8000 was
+occupied, so the campaign uses localhost port 18000 instead of stopping that service.
+A two-prompt token-ID check and first-16-problem quality pilot precede the campaign;
+these are commissioning measurements, not its full quality evaluation or replication.
+Supervisor jobs have autorestart disabled. Preparation and workload caps do not
+stop or destroy the rental and do not cap provider billing.
+
+The detached launcher now forwards an optional `--quality-limit N`, matching the
+existing main runner. The default remains the full 1,319-problem split. A fixed
+subset may be selected from measured budget estimates before campaign evaluation;
+its first-N identity remains recorded for honest paired comparisons and resume.
+
+The real baseline startup log, detailed benchmark and harness samples now have
+their own parser tests. Generic parser status remains provisional pending remaining
+quantized/failure coverage and campaign review; these fixtures do not certify
+unobserved edge cases.
+
+Live commissioning completed all eight calibration points, online/checkpoint FP8
+load probes and the first-16 quality/token-ID pilot. Forced AWQ/BF16 was rejected
+by vLLM because that explicit method accepts only FP16. Keep the master's fixed
+BF16 and forced-AWQ request, retain the failed probe in the existing unsupported
+status with its exact software/dtype reason, and do not claim general A100 AWQ
+incompatibility or silently substitute `awq_marlin`/FP16.
+
+Measured complete-design estimates are 20.89 hours with first-200 quality and
+25.84 hours with full quality, including stated reserves. The 14-hour gate halted.
+A concrete reduced proposal (11.53 hours; same eleven launches and five reps,
+first-200 quality, omit closed-loop chat concurrency 1) is available, but does not
+meet the original full-point M9 scope. No budget increase or reduced scope is
+assumed from silence; the owner was asked to choose among the three saved plans.
+
+### Approved M9 execution budget
+
+After recommending the 22-hour-cap plan (all performance points, fixed first-200
+GSM8K subset, 20.89-hour estimate), the owner replied "no go ahead". Proceed with
+that concrete recommendation: preserve every performance point and all five reps,
+retain the AWQ/BF16 failure, and use the same first-200 quality protocol throughout.
+The detached worker has a 22-hour workflow deadline; local ten-minute backups were
+extended to 26 hours with idle-sleep prevention while the monitor is alive. Neither
+deadline stops rental billing. This approval does not extend to rental destruction.
