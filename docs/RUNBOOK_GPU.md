@@ -10,7 +10,7 @@ cold-start/context tests are **not run (needs GPU)** and outside v0.1.0.
 Use the project's specified **one NVIDIA A100 80 GB SXM4**, with at least **150 GB disk**,
 SSH access, and a pinned CUDA-compatible image that does not auto-launch vLLM. Plan
 from measured calibration, plus installation/download time. The completed full
-performance/first-200-quality run used an configured 22-hour cap and completed in
+performance/first-200-quality run used a configured 22-hour cap and completed in
 19.51 workflow hours including interruption and analysis. The default remains
 14 hours; explicitly review the plan and budget before starting. That wall-clock
 cap starts at experiment creation, not rental, and includes paused time.

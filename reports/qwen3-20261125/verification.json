@@ -1,5 +1,7 @@
 {
   "scope": "Completed live Qwen3-8B campaign; not a release",
+  "original_report_file": "data/live/qwen3-20261124/archive/campaign/data/job/reports/report.json (local pre-redaction archive; not distributed)",
+  "original_report_description": "report.json before the Vast container label was removed; original_report_sha256 hashes these pre-redaction bytes",
   "original_report_sha256": "1ab542da0c8cee2d49e4ae88cdc3712dc9123a14555f7f249b7587ed802bde84",
   "public_report_sha256": "0b03f168699b155d08aaa6ae294a912a77f7f1fd2166e4dc222e3e9a52b802b8",
   "redaction": "Vast container label replaced; measurements/statistics unchanged",
@@ -52,7 +54,6 @@
     "plots": "rendered and visually reviewed",
     "optional_unrun": "GPT-OSS cold-start/context checks: not run (needs GPU)"
   },
-  "original_report_file": "data/live/qwen3-20261124/archive/campaign/data/job/reports/report.json (local pre-redaction archive; not distributed)",
   "public_artifact_sha256": {
     "reports/qwen3-20261125/report.json": "0b03f168699b155d08aaa6ae294a912a77f7f1fd2166e4dc222e3e9a52b802b8",
     "reports/qwen3-20261125/report.md": "11e7b9d48e2662bc65b62151864915f9db7f9980b6c16b42b067a14885dd2f14",

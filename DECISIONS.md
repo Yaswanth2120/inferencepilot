@@ -811,3 +811,14 @@ matrix job instead of being skipped for a missing optional plotting dependency.
 
 Follow-up validation: 319 offline tests passed in 156.36 seconds, Ruff passed,
 and the standalone synthetic selftest passed. Live paths: not run (needs GPU).
+
+
+### Report Markdown rebuild limitation
+
+The published report.md preserves its original presentation and JSON-string
+formatting. The agreement subsection was refreshed from the renderer while the
+rest was retained; rendering the public report.json wholesale is not byte-identical
+to that Markdown, a pre-existing serialization/presentation difference. Public
+artifact hashes attest to the committed files, not to byte-for-byte Markdown
+regeneration. Canonicalizing embedded JSON and rebuilding all report Markdown
+is separate work; no measurement or existing release artifact is changed here.
