@@ -1,10 +1,10 @@
-# Design through M8
+# Design — v0.1.0
 
 InferencePilot wraps pinned vLLM tooling rather than implementing another load
 generator. It compares **tested** configurations with measured noise, paired
-quality and an explicit constraint policy. The main pinned Qwen lifecycle and
-quality paths remain unverified live. A separate existing-server GPT-OSS path has
-real benchmark evidence; see [the project audit](PROJECT_STATUS.md).
+quality and an explicit constraint policy. The pinned Qwen campaign completed with 605 valid reps, paired first-200 quality
+and three independent baseline launches. A separate existing-server GPT-OSS path
+has its own narrower evidence; see [project status](PROJECT_STATUS.md).
 
 ## Data and execution
 
@@ -81,10 +81,12 @@ a runner subprocess and verify checkpoint identities and seeds after resume.
 Power uses seeded fake HTTP timing responses and reports actual detection counts;
 it is a simulated timing-model result, not a GPU claim. The campaign wrapper,
 calibration helper and WAL-safe backup script are prepared and tested offline.
-The owner follows [RUNBOOK_GPU.md](RUNBOOK_GPU.md) for M9; the remaining
-main-pipeline live paths are **not run (needs GPU)**. The owner-selected GPT-OSS
-existing-server subset is complete with a real fixture and archived report.
-Remaining optional M10 scope, M11 and the release tag remain separate gates.
+The completed campaign and off-rental archive follow [RUNBOOK_GPU.md](RUNBOOK_GPU.md).
+Real startup, precision/eager, benchmark and harness fixtures are tested offline;
+[fixture coverage](FIXTURE_COVERAGE.md) documents retained synthetic edge cases and
+conservative parser markers. The separate GPT-OSS existing-server performance subset
+is complete. Optional GPT-OSS cold-start/context checks are **not run (needs GPU)**
+and were explicitly omitted from v0.1.0.
 
 ## Offline readiness updates
 
@@ -94,4 +96,19 @@ inventing unsupported values. Quality caching shares a successful original
 model/precision/protocol evaluation, records inherited source IDs, and forces a
 separate combined-config evaluation. The row/cache commit is atomic, while
 performance launch replication and per-launch agreement checks remain unchanged.
-The owner currently prohibits rental access; all new verification used local fakes.
+No GPU is required for installation, offline CI or release verification. Runtime
+budget caps stop owned work, not provider billing or unrelated services.
+
+## Release and storage compatibility
+
+The package and CLI expose version 0.1.0. SQLite schema v1 is frozen independently
+of package version; the exact DDL snapshot and its hash are documented in
+[SCHEMA.md](SCHEMA.md). Unknown schema versions fail rather than being migrated
+implicitly. Wheel and source archives include the MIT license; the source archive
+also carries configs, documentation, scripts, tests, fixtures and published reports.
+
+Release validation uses a fresh clone and virtualenv for the README quickstart,
+then a separately installed wheel outside the checkout for the full offline selftest.
+The six CI jobs additionally verify installed version consistency and build a wheel.
+A GitHub release publishes the reviewed tag and artifacts; no PyPI publication is
+implied. [CHANGELOG.md](../CHANGELOG.md) records evidence and intentional omissions.

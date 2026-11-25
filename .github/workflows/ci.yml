@@ -21,6 +21,12 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e '.[dev]'
+      - name: Check installed release version
+        run: |
+          inferencepilot --version
+          python -c "from importlib.metadata import version; from inferencepilot import __version__; assert version('inferencepilot') == __version__"
+      - name: Build wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
       - run: ruff check .
       - run: pytest
       - run: inferencepilot selftest

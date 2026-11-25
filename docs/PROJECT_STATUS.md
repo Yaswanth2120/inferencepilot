@@ -3,7 +3,9 @@
 **M9 is complete.** The Qwen3 campaign, final generated report, plots, archive
 verification and documented fixture coverage are available under
 [`reports/qwen3-20261125/`](../reports/qwen3-20261125/README.md). Package version is
-0.0.1; v0.1.0 has not been released. No GPU work is needed for release preparation.
+0.1.0; the [release page](https://github.com/Yaswanth2120/inferencepilot/releases/tag/v0.1.0)
+and attached verification files identify the published tag and artifacts. No GPU
+work is needed for release verification.
 
 ## Verified evidence
 
@@ -55,14 +57,18 @@ compatibility, full GSM8K capability or general quality equivalence.
 |---|---|
 | M0–M8 | Implemented and verified offline; live campaign exercised the main path. |
 | M9 | Completed campaign, report, local archive verification, README images, real fixture coverage and documented provisional cases. |
-| Optional M10 | Existing-server GPT-OSS performance subset done; cold startup/context/OOM-boundary tests are not run (needs GPU). |
-| M11 | Final clean-clone/release review, schema/version freeze and v0.1.0 tag remain. |
+| Optional M10 | Existing-server performance subset retained. Remaining cold-start/context/OOM checks intentionally omitted from v0.1.0: not run (needs GPU). |
+| M11 | v0.1.0 release package, frozen schema v1, clean-clone and installed-wheel verification, annotated tag and GitHub assets; publication record on the release page. |
 
 The existing CLI, quality-cache lineage, telemetry, provenance and recovery tests
-remain in the suite. The release must still pass the six Linux/macOS × Python
-3.10/3.11/3.12 CI jobs and a clean-environment quickstart. Do not treat optional
+remain in the suite. The release gate requires the six Linux/macOS × Python
+3.10/3.11/3.12 CI jobs and the [clean-environment/artifact checks](RELEASE.md). Do not treat optional
 unrun experiments as completed. No rental stop or destruction was automated.
 
 Final M9 publication checks: **316 tests passed in 158.10 seconds**; Ruff passed.
 The focused report integration check passed after the label-layout change. All
 final images were rendered and visually reviewed, and README/report links resolve.
+
+M11 adds a schema-v1 hash guard and --version, updates build metadata and source
+archive contents, and corrects historical unverified/hold wording. Published
+release-verification.json and SHA256SUMS capture the final source/artifact results.

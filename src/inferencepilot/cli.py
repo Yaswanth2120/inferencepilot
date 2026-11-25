@@ -2,6 +2,7 @@
 
 import argparse
 
+from inferencepilot import __version__
 from inferencepilot import commands as handlers
 from inferencepilot.env import doctor
 from inferencepilot.plan_commands import plan_command
@@ -10,6 +11,7 @@ from inferencepilot.probe import probe_command
 
 def dispatch():
     parser = argparse.ArgumentParser(prog="inferencepilot")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
     check = commands.add_parser("doctor", help="inspect environment without loading a model")
     check.add_argument("--vllm-bin", default="vllm")
