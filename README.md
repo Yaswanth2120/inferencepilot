@@ -56,7 +56,7 @@ assessment, and constraint-based recommendations. See the
 - [ ] Complete optional GPT-OSS cold-start and context/OOM-boundary experiments.
 - [ ] Final release review and `v0.1.0`.
 
-The package is currently **0.0.1**. Latest local verification: **306 tests passed**
+The package is currently **0.0.1**. Latest local verification: **312 tests passed**
 and `ruff check .` passed. The Qwen3 campaign is in progress on one A100 80 GB,
 using all planned performance points, five reps, a fixed first-200 GSM8K subset,
 and a 22-hour cap. Final Qwen results are pending; remaining live paths are

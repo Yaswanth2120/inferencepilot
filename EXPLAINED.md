@@ -1123,3 +1123,5 @@ The runner now persists evidence declarations and full telemetry, and the report
 `scripts/readme_figures.py:plot_progress` draws observed rep and launch counts from a timestamped campaign snapshot. Each bar has its denominator and the figure states that count progress is not a completion-time estimate.
 
 `scripts/readme_figures.py:main` rebuilds the two README PNGs from committed source files using the optional report dependency. It runs offline and leaves the GPU experiment untouched.
+
+`analysis.combined_spec` now selects variant, checkpoint name and quantization method together from one observed precision candidate. These fields identify a single factor level and cannot be mixed independently; scheduling choices still combine as before, and the resulting configuration gets its own measured launch.
