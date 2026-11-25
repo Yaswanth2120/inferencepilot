@@ -35,3 +35,13 @@ and 4 fixed output tokens, seed 42, concurrency 1 and one warmup. Generated text
 was removed; measurement arrays and tool summaries are unchanged. No keys/tokens
 are included. This validates that specific result schema, not all software versions,
 chat quality, long contexts, or independently replicated server launches.
+
+## Completed campaign extension
+
+`qwen3_fp8_online_startup.log`, `qwen3_fp8_ckpt_startup.log`,
+`qwen3_eager_startup.log` and `qwen3_combined_startup.log` are actual campaign
+startup prefixes through readiness, with trailing whitespace trimmed and ANSI
+retained. Offline tests assert their precision, prefix setting, token budget,
+eager setting and resolved CUDA graph mode. They add coverage to the existing
+baseline/benchmark/harness fixtures. See [coverage](../../../docs/FIXTURE_COVERAGE.md)
+for the exact purpose of every retained provisional source and marker.

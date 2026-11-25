@@ -1125,3 +1125,15 @@ The runner now persists evidence declarations and full telemetry, and the report
 `scripts/readme_figures.py:main` rebuilds the two README PNGs from committed source files using the optional report dependency. It runs offline and leaves the GPU experiment untouched.
 
 `analysis.combined_spec` now selects variant, checkpoint name and quantization method together from one observed precision candidate. These fields identify a single factor level and cannot be mixed independently; scheduling choices still combine as before, and the resulting configuration gets its own measured launch.
+
+### Completed Qwen README figures
+
+`plot_qwen_performance` displays saved chat-concurrency-32 throughput and TTFT means with their existing confidence intervals. It marks the fixed 500 ms constraint and selected configuration without recomputing statistics or hiding the CI overlap.
+
+`plot_qwen_quality` plots only independent measured quality rows and their saved Wilson intervals. It excludes inherited copies and shows the fixed sample count and paired McNemar result to avoid inflating evidence.
+
+`plot_qwen_regressions` counts the report's existing corrected verdicts by tested candidate. Inconclusive results and the descriptive A/A count remain visible, while the unsupported untested AWQ variant is explicitly excluded.
+
+`plot_progress` now also renders a completed snapshot, and `main` rebuilds the GPT-OSS, Qwen and completion images from committed sources. These display changes do not alter campaign statistics or invoke a live model.
+
+`report.plots` now allocates width for the number of configurations and angles long labels. This prevents the real nine-configuration report from overlapping names while preserving every plotted statistic and replication count.

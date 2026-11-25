@@ -1,13 +1,13 @@
 {
-  "scope": "Qwen3-8B campaign progress snapshot; not final performance results",
-  "source": "Read-only campaign SQLite counts and detached job status",
-  "snapshot_unix": 1795611993.6104772,
-  "phase": "campaign",
+  "scope": "Completed Qwen3 campaign; measurements and automated analysis finished",
+  "source": "Verified archived SQLite, raw metrics and detached completion status",
+  "snapshot_unix": 1795641720.0561225,
+  "phase": "completed",
   "planned_reps": 605,
-  "valid_reps": 379,
+  "valid_reps": 605,
   "failed_reps": 0,
   "planned_launches": 11,
-  "finished_launches": 6,
-  "elapsed_hours": 11.252040444744958,
+  "finished_launches": 11,
+  "elapsed_hours": 19.50938566327095,
   "cap_hours": 22
 }

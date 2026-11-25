@@ -1,0 +1,55 @@
+{
+  "scope": "Completed live Qwen3-8B campaign; not a release",
+  "original_report_sha256": "1ab542da0c8cee2d49e4ae88cdc3712dc9123a14555f7f249b7587ed802bde84",
+  "public_report_sha256": "0b03f168699b155d08aaa6ae294a912a77f7f1fd2166e4dc222e3e9a52b802b8",
+  "redaction": "Vast container label replaced; measurements/statistics unchanged",
+  "verification": {
+    "verified_at": 1795645530.762764,
+    "sqlite_integrity": "ok",
+    "raw_reps_reparsed_and_crosschecked": 605,
+    "requests": 110000,
+    "output_tokens": 25344000,
+    "report_files": [
+      "output_throughput.png",
+      "p95_e2e.png",
+      "report.json",
+      "report.md"
+    ]
+  },
+  "completion": {
+    "scope": "Completed Qwen3 campaign; measurements and automated analysis finished",
+    "source": "Verified archived SQLite, raw metrics and detached completion status",
+    "snapshot_unix": 1795641720.0561225,
+    "phase": "completed",
+    "planned_reps": 605,
+    "valid_reps": 605,
+    "failed_reps": 0,
+    "planned_launches": 11,
+    "finished_launches": 11,
+    "elapsed_hours": 19.50938566327095,
+    "cap_hours": 22
+  },
+  "recovery_source_commit": "bfa5791",
+  "limitations": [
+    "Single GPU/model family/version",
+    "Fixed first 200 GSM8K problems",
+    "Requested forced AWQ/BF16 unsupported; not general A100 AWQ incompatibility",
+    "Chunked prefill fixed on; KV cache dtype fixed auto; optional factor variants not evaluated",
+    "605 valid benchmark reps plus separate commissioning; inherited quality rows are not independent evaluations",
+    "Nominal MDE approximation; overlapping A/A splits descriptive"
+  ],
+  "aggregate_verification": {
+    "aggregate_rows_verified": 657,
+    "source": "analysis.aggregate; all means, 10000-resample CI endpoints, rep/launch counts match"
+  },
+  "recommendation_reproduced": true,
+  "plot_presentation": "Generated plots rerendered with wider layout and angled labels; stored statistics unchanged",
+  "publication_checks": {
+    "pytest_passed": 316,
+    "pytest_seconds": 158.1,
+    "ruff": "passed",
+    "focused_report_test": "1 passed",
+    "plots": "rendered and visually reviewed",
+    "optional_unrun": "GPT-OSS cold-start/context checks: not run (needs GPU)"
+  }
+}

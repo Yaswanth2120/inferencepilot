@@ -51,23 +51,22 @@ assessment, and constraint-based recommendations. See the
 - [x] CI on Linux and macOS with Python 3.10, 3.11, and 3.12.
 - [x] GPT-OSS-120B performance validation: 30 reps, 3,000 requests, archived results.
 - [x] Pinned Qwen3 baseline startup, detailed benchmark, and harness fixtures.
-- [ ] Finish the Qwen3-8B campaign, validate its complete archive, and publish the
-  final comparisons and recommendation.
+- [x] Qwen3-8B live campaign, verified archive, final comparisons and recommendation:
+  605 valid reps, 110,000 requests, 11 launches.
 - [ ] Complete optional GPT-OSS cold-start and context/OOM-boundary experiments.
 - [ ] Final release review and `v0.1.0`.
 
-The package is currently **0.0.1**. Latest local verification: **312 tests passed**
-and `ruff check .` passed. The Qwen3 campaign is in progress on one A100 80 GB,
-using all planned performance points, five reps, a fixed first-200 GSM8K subset,
-and a 22-hour cap. Final Qwen results are pending; remaining live paths are
-**not run (needs GPU)**. Detailed evidence and release gates are tracked in
-[project status](docs/PROJECT_STATUS.md).
+The package is currently **0.0.1**. Latest local verification: **316 tests passed**
+and `ruff check .` passed. The Qwen3 campaign completed on one A100 80 GB in
+19.51 wall-clock hours, within its 22-hour cap. All performance points and five
+reps were retained; quality used the same first 200 GSM8K problems. The final
+archive and all 605 raw reps were checked locally. Optional GPU experiments remain
+**not run (needs GPU)**; release gates are tracked in [project status](docs/PROJECT_STATUS.md).
 
-![Qwen3 campaign progress showing completed reps and launches at a dated snapshot](reports/readme/campaign-progress.png)
+![Completed Qwen3 campaign with 605 valid reps and 11 completed launches](reports/readme/campaign-progress.png)
 
-Progress is a dated snapshot, not a live dashboard or a completion-time estimate.
-The [source counts](reports/readme/progress.json) distinguish completed measurements
-from the final analysis and recommendation, which are still pending.
+The [completion snapshot](reports/readme/progress.json) records observed counts and
+workflow duration, including interruption and analysis; rental setup is excluded.
 
 ## Quickstart
 
@@ -153,7 +152,57 @@ periodic consistent SQLite backups. A fixed `--quality-limit N` selects the firs
 N GSM8K problems consistently across comparisons. Runtime caps stop workloads;
 they do not stop rental billing. See the [GPU runbook](docs/RUNBOOK_GPU.md).
 
-## Verified live results
+## Qwen3-8B results
+
+The completed campaign compared BF16, online FP8, a published FP8 checkpoint,
+scheduling factors, a combined candidate and an eager seeded regression. Baseline
+numbers pool **15 reps across three launches**; each candidate has **five reps in
+one launch**. The requested forced-AWQ/BF16 combination was rejected and retained
+with its exact software/dtype error.
+
+**Best tested configuration under the saved constraints:** BF16 with
+`max_num_batched_tokens=2048`, prefix caching on, `max_num_seqs=256`, chunked prefill
+on and CUDA graphs enabled. At chat concurrency 32 it measured **1988.78 tokens/s**,
+**476.91 ms mean rep-p95 TTFT**, and **3862.89 ms mean rep-p95 E2E** (n=5).
+
+The TTFT policy tests the mean rep-p95 against 500 ms. Its 95% CI is
+**452.70–507.26 ms**, overlapping that limit: eligibility is not a guaranteed SLO.
+FP8 and the combined candidate had higher throughput but failed this TTFT constraint.
+
+![Qwen throughput and TTFT confidence intervals at chat concurrency 32](reports/readme/qwen-performance.png)
+
+| Configuration | Output tokens/s | Mean rep p95 TTFT (ms) | Mean rep p95 E2E (ms) | Reps |
+|---|---:|---:|---:|---:|
+| BF16 baseline | 1987.54 | 534.10 | 3815.93 | 15 |
+| BF16 token budget 2048 | 1988.78 | 476.91 | 3862.89 | 5 |
+| Online FP8 | 2521.96 | 701.31 | 3043.08 | 5 |
+| FP8 checkpoint | 2479.04 | 740.26 | 3102.43 | 5 |
+| Combined | 2518.98 | 706.32 | 3042.96 | 5 |
+| Eager regression | 1357.73 | 536.45 | 5659.91 | 5 |
+
+These are observed rep-level means at `chat:closed:32`; full confidence intervals,
+MDEs and corrected comparisons are in the [final report](reports/qwen3-20261125/README.md).
+
+Four independent quality evaluations measured BF16 **186/200**, online FP8
+**186/200**, FP8 checkpoint **188/200**, and combined **186/200**. Paired McNemar
+p-values versus BF16 were 1, 0.6875 and 1. These subset results do not establish
+quality equivalence; scheduling-only rows reuse named baseline evidence.
+
+![Qwen quality scores with Wilson intervals and paired McNemar results](reports/readme/qwen-quality.png)
+
+The eager seeded regression was detected: throughput **−31.69%** and p95 E2E
+**+48.32%** at chat concurrency 32 (Holm-adjusted p=0.004708, baseline n=15,
+candidate n=5). A/A validation recorded **7/219 false positives (3.20%)**, with
+45 inconclusive comparisons; overlapping launch splits make that rate descriptive.
+
+![Corrected verdict counts with inconclusive results retained](reports/readme/qwen-regressions.png)
+
+[Final Qwen report](reports/qwen3-20261125/README.md) ·
+[Detailed Markdown](reports/qwen3-20261125/report.md) ·
+[JSON results](reports/qwen3-20261125/report.json) ·
+[Archive verification](reports/qwen3-20261125/verification.json)
+
+## GPT-OSS performance validation
 
 The separate GPT-OSS-120B experiment completed **30/30 reps** and **3,000 requests**
 in **108.4 minutes** on one A100 80 GB with vLLM 0.32.0. Each point below has
@@ -168,7 +217,7 @@ All raw files were checked locally and the archived database passed integrity ch
 
 These plots use the published GPT-OSS measurements, with five reps per point.
 The single-sequence server limit explains the rising queueing latency; the plots
-do not represent the in-progress Qwen experiment.
+are separate from the Qwen campaign below.
 
 | Workload | Client concurrency | Output tokens/s [95% CI] | Mean rep p95 E2E ms [95% CI] | Reps |
 |---|---:|---|---|---:|
@@ -272,7 +321,7 @@ web UI are outside the project scope. Recommendations always refer to the
 
 Rebuild the README images with `python scripts/readme_figures.py` after installing
 the report extra. The script reads the committed report and progress JSON; it does
-not rerun benchmarks or recompute confidence intervals. Final Qwen performance,
-quality and regression plots will accompany its completed, verified report.
+not rerun benchmarks or recompute confidence intervals. It renders both campaigns,
+Qwen quality and corrected-verdict plots, and the final completion snapshot.
 
 Released under the [MIT License](LICENSE).

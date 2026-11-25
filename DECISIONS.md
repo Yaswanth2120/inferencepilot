@@ -745,3 +745,26 @@ Treat variant/model/quantization as one indivisible observed factor level; sched
 factors remain independently selected. No thresholds, recorded measurements, factor
 scores or experiment budget are changed. Resume the original experiment under its
 original creation-time 22-hour deadline; do not rerun committed reps.
+
+### Completed M9 evidence and publication
+
+The complete 605-rep/110,000-request archive was re-parsed and cross-checked locally;
+SQLite integrity and all 657 reproduced aggregate means/CIs/n matched. Publish the
+generated report unchanged except for the provider container label, retaining both
+hashes and the recovery source SHAs. Keep raw data outside Git and commit real
+startup fixture extensions plus a complete map of retained provisional edge cases.
+
+The saved mean-of-rep SLO policy selects BF16 token budget 2048, not the highest
+throughput FP8 variant. Its TTFT CI overlaps 500 ms; state that uncertainty rather
+than introducing a post-hoc CI-based constraint or promising a guaranteed SLO.
+A/A 7/219 is descriptive for overlapping splits. Quality is a fixed first-200
+relative comparison; inherited rows are not independent new measurements.
+
+README images now show completed counts, measured performance/TTFT tradeoffs,
+four independent quality evaluations and stored corrected verdict counts. They
+use saved statistics, preserve n and MDE/inconclusive context, and are generated
+locally without starting a GPU. M11 release/version/tag work remains separate.
+
+Visual review found overlapping configuration names in the generated nine-config
+plots. Rerender only their presentation with count-dependent width and angled labels;
+leave report Markdown/JSON statistics unchanged and retain original archived plots.

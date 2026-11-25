@@ -1,0 +1,65 @@
+{
+  "variant": "awq",
+  "status": "probe_failed",
+  "parser_status": "provisional",
+  "launches": [
+    {
+      "requested": {
+        "variant": "awq",
+        "model": "Qwen/Qwen3-8B-AWQ",
+        "quantization": "awq",
+        "dtype": "bfloat16",
+        "gpu_memory_utilization": 0.9,
+        "max_model_len": 8192,
+        "max_num_batched_tokens": 8192,
+        "max_num_seqs": 256,
+        "prefix_caching": true,
+        "chunked_prefill": true,
+        "kv_cache_dtype": "auto",
+        "enforce_eager": false,
+        "host": "127.0.0.1",
+        "port": 18000,
+        "seed": 0
+      },
+      "launch": {
+        "id": "c8160272d34b4092aefaf76828e1c53d",
+        "cmd": [
+          "vllm",
+          "serve",
+          "Qwen/Qwen3-8B-AWQ",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18000",
+          "--seed",
+          "0",
+          "--dtype",
+          "bfloat16",
+          "--quantization",
+          "awq",
+          "--max-model-len",
+          "8192",
+          "--gpu-memory-utilization",
+          "0.9",
+          "--max-num-batched-tokens",
+          "8192",
+          "--max-num-seqs",
+          "256",
+          "--kv-cache-dtype",
+          "auto",
+          "--enable-prefix-caching",
+          "--enable-chunked-prefill"
+        ],
+        "log_path": "data/m9-bootstrap/probe-logs/c8160272d34b4092aefaf76828e1c53d.log",
+        "started_at": 1795568996.088522,
+        "status": "unsupported_on_hardware",
+        "ready_at": null,
+        "stopped_at": 1795569037.9940898,
+        "startup_seconds": null,
+        "resolved_args": {},
+        "error": "server exited during startup with code 1\nLast 200 startup log lines:\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325] \n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325]        \u2588     \u2588     \u2588\u2584   \u2584\u2588\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325]  \u2584\u2584 \u2584\u2588 \u2588     \u2588     \u2588 \u2580\u2584\u2580 \u2588  version 0.15.1\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325]   \u2588\u2584\u2588\u2580 \u2588     \u2588     \u2588     \u2588  model   Qwen/Qwen3-8B-AWQ\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325]    \u2580\u2580  \u2580\u2580\u2580\u2580\u2580 \u2580\u2580\u2580\u2580\u2580 \u2580     \u2580\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:325] \n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:35 [utils.py:261] non-default args: {'model_tag': 'Qwen/Qwen3-8B-AWQ', 'api_server_count': 1, 'host': '127.0.0.1', 'port': 18000, 'model': 'Qwen/Qwen3-8B-AWQ', 'dtype': 'bfloat16', 'max_model_len': 8192, 'quantization': 'awq', 'enable_prefix_caching': True, 'max_num_batched_tokens': 8192, 'max_num_seqs': 256, 'enable_chunked_prefill': True}\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:36 [model.py:541] Resolved architecture: Qwen3ForCausalLM\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m WARNING 11-25 01:10:36 [model.py:1885] Casting torch.float16 to torch.bfloat16.\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:36 [model.py:1561] Using max model len 8192\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:36 [awq_marlin.py:166] Detected that the model can run with awq_marlin, however you specified quantization=awq explicitly, so forcing awq. Use quantization=awq_marlin for faster inference\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m INFO 11-25 01:10:36 [scheduler.py:226] Chunked prefill is enabled with max_num_batched_tokens=8192.\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m Traceback (most recent call last):\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/bin/vllm\", line 10, in <module>\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     sys.exit(main())\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m              ^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/cli/main.py\", line 73, in main\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     args.dispatch_function(args)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/cli/serve.py\", line 111, in cmd\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     uvloop.run(run_server(args))\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/uvloop/__init__.py\", line 96, in run\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return __asyncio.run(\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/usr/lib/python3.12/asyncio/runners.py\", line 194, in run\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return runner.run(main)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/usr/lib/python3.12/asyncio/runners.py\", line 118, in run\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return self._loop.run_until_complete(task)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"uvloop/loop.pyx\", line 1515, in uvloop.loop.Loop.run_until_complete\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/uvloop/__init__.py\", line 48, in wrapper\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return await main\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 919, in run_server\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 938, in run_server_worker\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     async with build_async_engine_client(\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/usr/lib/python3.12/contextlib.py\", line 210, in __aenter__\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return await anext(self.gen)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 147, in build_async_engine_client\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     async with build_async_engine_client_from_engine_args(\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/usr/lib/python3.12/contextlib.py\", line 210, in __aenter__\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     return await anext(self.gen)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m            ^^^^^^^^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py\", line 173, in build_async_engine_client_from_engine_args\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     vllm_config = engine_args.create_engine_config(usage_context=usage_context)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/vllm/engine/arg_utils.py\", line 1754, in create_engine_config\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     config = VllmConfig(\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m              ^^^^^^^^^^^\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   File \"/venv/inferencepilot-m9/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py\", line 121, in __init__\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m pydantic_core._pydantic_core.ValidationError: 1 validation error for VllmConfig\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m   Value error, torch.bfloat16 is not supported for quantization method awq. Supported dtypes: [torch.float16] [type=value_error, input_value=ArgsKwargs((), {'model_co...timizationLevel.O2: 2>}), input_type=ArgsKwargs]\n\u001b[0;36m(APIServer pid=141484)\u001b[0;0m     For further information visit https://errors.pydantic.dev/2.14/v/value_error\n",
+        "cleanup_complete": true
+      }
+    }
+  ]
+}

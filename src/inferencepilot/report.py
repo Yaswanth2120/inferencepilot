@@ -230,7 +230,7 @@ def plots(bundle, directory):
             continue
         for row in rows:
             number(row["mean"], row["n_reps"])
-        figure, axis = plt.subplots(figsize=(10, 5))
+        figure, axis = plt.subplots(figsize=(max(10, len(rows) * 1.8), 6))
         positions = list(range(len(rows)))
         axis.errorbar(
             positions,
@@ -243,7 +243,10 @@ def plots(bundle, directory):
             capsize=4,
         )
         axis.set_xticks(
-            positions, [f"{labels[r['config_id']]}\nn={r['n_reps']} reps" for r in rows]
+            positions,
+            [f"{labels[r['config_id']]}\nn={r['n_reps']} reps" for r in rows],
+            rotation=25,
+            ha="right",
         )
         axis.set_ylabel("tokens/s" if metric == "output_throughput" else "mean rep p95 E2E (ms)")
         scope = bundle.get("evidence", {}).get("kind", "unverified")
