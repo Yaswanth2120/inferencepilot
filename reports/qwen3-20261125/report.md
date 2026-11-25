@@ -1401,18 +1401,18 @@ Inherited rows reuse their named source evaluation; do not sum them as independe
 
 ## Greedy token agreement
 
-| Config | Exact match rate (n prompts) | Mean first divergent token position |
+| Config / launch (reference launch) | Exact match rate (n prompts) | Mean first divergent token position |
 |---|---|---|
-| baseline | 1 (n=200) | None |
-| baseline | 1 (n=200) | None |
-| combined | 0.585 (n=200) | 25.602409638554217 |
-| max_num_batched_tokens-16384 | 1 (n=200) | None |
-| max_num_batched_tokens-2048 | 1 (n=200) | None |
-| max_num_seqs-64 | 1 (n=200) | None |
-| prefix_caching-false | 1 (n=200) | None |
-| seeded-eager | 0.89 (n=200) | 20.636363636363637 |
-| weights-fp8_ckpt | 0.575 (n=200) | 25.55294117647059 |
-| weights-fp8_online | 0.585 (n=200) | 25.602409638554217 |
+| baseline / d48d465d88424020a7aac7dd938eb761 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| baseline / 60eb627fbdb743e9ab4c93410164ade3 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| combined / 9e7109fc5cd245e8a440c8df268dd75f (reference 6c68c2e630664ee495ae5cf40e2c442f) | 0.585 (n=200) | 25.602409638554217 |
+| max_num_batched_tokens-16384 / 5c0a919a77ac4814838e550e8d4b2c2c (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| max_num_batched_tokens-2048 / 3e30ec2089ed4742ad34f61fa3926bf4 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| max_num_seqs-64 / 021193f0808241f9be869b9a4519a189 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| prefix_caching-false / 59bc8de41295458baed3ba16ec6d0469 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 1 (n=200) | None |
+| seeded-eager / be9223c4cb1c4a13b4e73a7185a5a2e4 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 0.89 (n=200) | 20.636363636363637 |
+| weights-fp8_ckpt / 21d5ea78e8cf47938034987189347c26 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 0.575 (n=200) | 25.55294117647059 |
+| weights-fp8_online / 930233a2c725482685075267752d2673 (reference 6c68c2e630664ee495ae5cf40e2c442f) | 0.585 (n=200) | 25.602409638554217 |
 
 Position is zero-based; matching outputs are excluded, strict prefixes diverge at the shorter length.
 

@@ -56,8 +56,9 @@ assessment, and constraint-based recommendations. See the
 - [ ] Optional GPT-OSS cold-start/context experiments: intentionally outside v0.1.0.
   **Not run (needs GPU).**
 - [x] v0.1.0 packaging and verification workflow, CLI version checks, and frozen schema v1.
+- [x] Post-release findings, evidence-driven figures, launch labels and artifact hash checks.
 
-The package version is **0.1.0** ([release downloads](https://github.com/Yaswanth2120/inferencepilot/releases/tag/v0.1.0)). Latest local verification: **317 tests passed**
+The package version is **0.1.0** ([release downloads](https://github.com/Yaswanth2120/inferencepilot/releases/tag/v0.1.0)). Latest local verification: **319 tests passed**
 and `ruff check .` passed. The Qwen3 campaign completed on one A100 80 GB in
 19.51 wall-clock hours, within its 22-hour cap. All performance points and five
 reps were retained; quality used the same first 200 GSM8K problems. The final
@@ -336,5 +337,10 @@ Rebuild the README images with `python scripts/readme_figures.py` after installi
 the report extra. The script reads the committed report and progress JSON; it does
 not rerun benchmarks or recompute confidence intervals. It renders both campaigns,
 Qwen quality and corrected-verdict plots, and the final completion snapshot.
+
+Post-release reporting corrections document the eager agreement deviation and
+prefix-workload regressions in the [Qwen campaign findings](reports/qwen3-20261125/README.md).
+Figure highlights, SLO annotations and replication captions follow saved report
+evidence; campaign verification includes hashes for published Markdown and plots.
 
 Released under the [MIT License](LICENSE).

@@ -2,7 +2,7 @@
 
 **605 valid reps, 110,000 requests, 25,344,000 output tokens, 11 successful launches.**
 The main workflow completed in 19.51 wall-clock hours, including its interruption
-and automated analysis, within the approved 22-hour cap. Separate commissioning
+and automated analysis, within the configured 22-hour cap. Separate commissioning
 and rental setup are excluded from that workflow time.
 
 [Full report](report.md) · [Machine-readable results](report.json) ·
@@ -47,6 +47,17 @@ raw completions and a 512-token generation cap: BF16 186/200, online FP8 186/200
 FP8 checkpoint 188/200, combined 186/200. Paired McNemar p-values were 1, 0.6875,
 and 1 versus BF16. These results do not establish general quality equivalence.
 Scheduling-only quality rows explicitly inherit source evidence.
+
+The non-quantized eager configuration matched BF16 on only 178/200 prompts (89%)
+with unchanged BF16 weights. Kernel numerical differences are a possible,
+unverified explanation; this is an observed agreement deviation, not a diagnosed bug.
+
+Disabling prefix caching caused measured prefix-workload regressions: throughput
+fell 48.2% at prefix@16 and 72.3% at prefix@64. The combined candidate, selected
+using chat-throughput scores, fell 52.5% and 77.2% respectively; all corresponding
+TTFT and E2E comparisons also received regression verdicts. Optimizing factor
+levels for chat did not transfer to prefix-heavy traffic; the combined run also
+changes other factors, so its losses cannot be attributed to caching alone.
 
 ![Quality and paired comparisons](../readme/qwen-quality.png)
 ![Corrected verdict counts](../readme/qwen-regressions.png)

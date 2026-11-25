@@ -14,7 +14,7 @@ work is needed for release verification.
   candidates, combined candidate and seeded eager regression. Five reps per point;
   all eight closed-loop points and three measured-capacity open-loop chat rates.
 - The workflow completed in 19.51 wall-clock hours including recovery and automated
-  analysis, below the approved 22-hour cap. Commissioning/setup are separate.
+  analysis, below the configured 22-hour cap. Commissioning/setup are separate.
 - Four independent first-200 GSM8K evaluations; scheduling-only rows inherit named
   sources. Token-ID agreement was captured for all launches with a baseline reference.
 - A/A false-positive rate 7/219 (3.20%), 45 inconclusive comparisons; overlapping
