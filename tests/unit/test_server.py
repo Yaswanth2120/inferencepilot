@@ -54,6 +54,27 @@ def test_resolved_config_real_qwen_pinned_startup():
     assert resolved["raw_matched_lines"]
 
 
+@pytest.mark.parametrize(
+    "name,quantization,eager,prefix,budget",
+    [
+        ("fp8_online", "fp8", False, True, 8192),
+        ("fp8_ckpt", "fp8", False, True, 8192),
+        ("eager", None, True, True, 8192),
+        ("combined", "fp8", False, False, 16384),
+    ],
+)
+def test_real_campaign_resolved_variants(name, quantization, eager, prefix, budget):
+    path = Path(__file__).resolve().parents[1] / f"fixtures/real/qwen3_{name}_startup.log"
+    resolved = parse_resolved_config(path.read_text())
+    assert resolved["quantization"] == quantization
+    assert resolved["enforce_eager"] is eager
+    assert resolved["prefix_caching"] is prefix
+    assert resolved["max_num_batched_tokens"] == budget
+    assert resolved["cuda_graph_mode"] == ("NONE" if eager else "FULL_AND_PIECEWISE")
+    assert resolved["max_model_len"] == 8192
+    assert resolved["attention_backend"] == "FLASH_ATTN"
+
+
 def test_log_overrides_unknown_fields_and_ansi():
     raw = "\x1b[32menable_prefix_caching=True, chunked_prefill_enabled=True\x1b[0m"
     resolved = parse_resolved_config(

@@ -1,0 +1,14 @@
+{
+  "Qwen/Qwen3-8B": {
+    "sha": "b968826d9c46dd6066d109eabc6255188de91218",
+    "gated": false
+  },
+  "Qwen/Qwen3-8B-AWQ": {
+    "sha": "4da05a8edb55c6046cce958586c33b61da07bb79",
+    "gated": false
+  },
+  "Qwen/Qwen3-8B-FP8": {
+    "sha": "220b46e3b2180893580a4454f21f22d3ebb187d3",
+    "gated": false
+  }
+}
