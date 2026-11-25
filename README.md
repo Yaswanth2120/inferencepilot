@@ -63,6 +63,12 @@ and a 22-hour cap. Final Qwen results are pending; remaining live paths are
 **not run (needs GPU)**. Detailed evidence and release gates are tracked in
 [project status](docs/PROJECT_STATUS.md).
 
+![Qwen3 campaign progress showing completed reps and launches at a dated snapshot](reports/readme/campaign-progress.png)
+
+Progress is a dated snapshot, not a live dashboard or a completion-time estimate.
+The [source counts](reports/readme/progress.json) distinguish completed measurements
+from the final analysis and recommendation, which are still pending.
+
 ## Quickstart
 
 Run the complete offline pipeline without a GPU:
@@ -157,6 +163,12 @@ The server used **`max_num_seqs=1`**. Higher client concurrency therefore measur
 queueing behind that limit; these results do not establish optimized batching,
 paired model quality, or regression power across independent server launches.
 All raw files were checked locally and the archived database passed integrity checks.
+
+![Measured GPT-OSS throughput and latency with 95 percent confidence intervals](reports/readme/gptoss-results.png)
+
+These plots use the published GPT-OSS measurements, with five reps per point.
+The single-sequence server limit explains the rising queueing latency; the plots
+do not represent the in-progress Qwen experiment.
 
 | Workload | Client concurrency | Output tokens/s [95% CI] | Mean rep p95 E2E ms [95% CI] | Reps |
 |---|---:|---|---|---:|
@@ -257,5 +269,10 @@ web UI are outside the project scope. Recommendations always refer to the
 [Project status](docs/PROJECT_STATUS.md) · [Decisions](DECISIONS.md) ·
 [Function explanations](EXPLAINED.md) · [Contributing](CONTRIBUTING.md) ·
 [Specification](AGENTS.md)
+
+Rebuild the README images with `python scripts/readme_figures.py` after installing
+the report extra. The script reads the committed report and progress JSON; it does
+not rerun benchmarks or recompute confidence intervals. Final Qwen performance,
+quality and regression plots will accompany its completed, verified report.
 
 Released under the [MIT License](LICENSE).

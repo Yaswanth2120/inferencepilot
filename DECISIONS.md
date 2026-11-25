@@ -725,3 +725,13 @@ retain the AWQ/BF16 failure, and use the same first-200 quality protocol through
 The detached worker has a 22-hour workflow deadline; local ten-minute backups were
 extended to 26 hours with idle-sleep prevention while the monitor is alive. Neither
 deadline stops rental billing. This approval does not extend to rental destruction.
+
+### README result and progress images
+
+Use Matplotlib PNGs generated from the committed GPT-OSS report and a sanitized,
+dated read-only Qwen progress snapshot. Preserve saved confidence intervals and n;
+label GPT-OSS's single-lifetime/max_num_seqs=1 scope directly on the image. The
+progress graphic reports counts, not runtime completion or final Qwen findings.
+Commit its source counts and generator so it can be refreshed reproducibly. Final
+Qwen throughput, latency, quality and regression visuals belong with the verified
+completed campaign report; do not substitute synthetic plots for those results.

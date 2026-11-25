@@ -1115,3 +1115,11 @@ The runner now persists evidence declarations and full telemetry, and the report
 `scripts/live_pilot.py:main` parses the configuration and fresh artifact directory, then runs the pilot. Its SIGTERM handler allows normal owned-server cleanup when the supervising job is stopped.
 
 `detached_campaign.Supervisor.run` now forwards an optional fixed quality subset to the runner. The runner persists that first-N protocol for resume and paired evaluation; omitting the option retains the full test split.
+
+### README figures
+
+`scripts/readme_figures.py:plot_results` plots the published GPT-OSS means and confidence intervals, with the original replication counts and single-sequence limitation visible. It reads saved statistics instead of recalculating them, and converts latency milliseconds to seconds only for display.
+
+`scripts/readme_figures.py:plot_progress` draws observed rep and launch counts from a timestamped campaign snapshot. Each bar has its denominator and the figure states that count progress is not a completion-time estimate.
+
+`scripts/readme_figures.py:main` rebuilds the two README PNGs from committed source files using the optional report dependency. It runs offline and leaves the GPU experiment untouched.
