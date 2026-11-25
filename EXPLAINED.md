@@ -1137,3 +1137,9 @@ The runner now persists evidence declarations and full telemetry, and the report
 `plot_progress` now also renders a completed snapshot, and `main` rebuilds the GPT-OSS, Qwen and completion images from committed sources. These display changes do not alter campaign statistics or invoke a live model.
 
 `report.plots` now allocates width for the number of configurations and angles long labels. This prevents the real nine-configuration report from overlapping names while preserving every plotted statistic and replication count.
+
+### M11 release verification
+
+`cli.dispatch` now exposes the package version through argparse's standard version action. It exits before requiring a subcommand, so an installed artifact can identify itself without loading a model.
+
+`test_released_schema_v1_snapshot` compares the active DDL with the released SQL snapshot and its fixed SHA-256. This guards the storage contract against accidental drift when package versions change.

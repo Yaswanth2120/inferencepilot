@@ -327,7 +327,7 @@ def plot_qwen_regressions(data, destination):
 
 
 def main():
-    """Rebuild both README images from their committed source files."""
+    """Rebuild README figures from committed reports and completion counts."""
     directory = ROOT / "reports/readme"
     directory.mkdir(parents=True, exist_ok=True)
     plot_results(ROOT / "reports/gptoss-20261124/report.json", directory / "gptoss-results.png")

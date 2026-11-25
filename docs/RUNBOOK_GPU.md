@@ -1,14 +1,19 @@
-# M9 owner GPU campaign
+# GPU campaign runbook
 
-M0–M8 use synthetic offline evidence. Live GPU execution is **not run (needs GPU)**.
-The scripts below are prepared for the owner; no rental or live deployment is automated.
+The [completed Qwen3 campaign](../reports/qwen3-20261125/README.md) contains the
+measured results and archive verification. This runbook supports reproducing that
+workflow; rental provisioning and billing shutdown remain manual. Optional GPT-OSS
+cold-start/context tests are **not run (needs GPU)** and outside v0.1.0.
 
 ## Rental and setup
 
 Use the project's specified **one NVIDIA A100 80 GB SXM4**, with at least **150 GB disk**,
-SSH access, and a pinned CUDA-compatible image that does not auto-launch vLLM. Reserve
-an **8–14 GPU-hour campaign window**, plus installation/download/calibration time; the
-runner's default 14-hour wall-clock cap starts at experiment creation, not at rental.
+SSH access, and a pinned CUDA-compatible image that does not auto-launch vLLM. Plan
+from measured calibration, plus installation/download time. The completed full
+performance/first-200-quality run used an approved 22-hour cap and completed in
+19.51 workflow hours including interruption and analysis. The default remains
+14 hours; explicitly review the plan and budget before starting. That wall-clock
+cap starts at experiment creation, not rental, and includes paused time.
 Check the provider's actual hourly and storage prices before purchasing. Do not use
 multiple GPUs. Keep optional GPT-OSS work out of this Qwen campaign.
 
@@ -227,11 +232,11 @@ pinned-version doctor or every provisional fixture. See the live validation note
 for checkpoint, archive and Supervisor paths. Stopping this benchmark does not stop
 the model server or rental billing.
 
-## Readiness update and current access hold
+## Shared-instance access and provenance
 
-The owner has reserved the rental for another project. Do not access or use it
-until explicit authorization is renewed. None of the offline tests require SSH
-or the rented GPU.
+Coordinate access before using a shared GPU. Offline tests and release verification
+require neither SSH nor a rental. Never stop foreign workloads or alter a shared
+Python environment; use a separate checkout and virtualenv when appropriate.
 
 Future direct campaign execution can declare `--evidence live`; run_campaign.sh
 and the detached supervisor add this declaration automatically for an explicitly
@@ -247,7 +252,8 @@ separately; rows and recommendations retain the source launch/quality ID. The
 reference sample files must remain available for paired comparisons and resume.
 Repeated baseline launches still provide independent performance observations,
 not additional independent GSM8K samples. Agreement checks continue per launch.
-Only offline fake coverage has verified these new paths so far.
+The completed Qwen campaign exercised these paths on the pinned live stack;
+[fixture coverage](FIXTURE_COVERAGE.md) states which unobserved cases remain synthetic.
 
 ## Small quality pilot before the campaign
 

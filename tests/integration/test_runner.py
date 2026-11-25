@@ -1,3 +1,4 @@
+import hashlib
 import json
 import signal
 import sqlite3
@@ -12,6 +13,14 @@ from inferencepilot.fakes.selftest import fake_path, mini_plan
 from inferencepilot.runner import Options, Runner
 from inferencepilot.server import ServerTimeouts
 from inferencepilot.store import SCHEMA, Store
+
+
+def test_released_schema_v1_snapshot():
+    snapshot = (Path(__file__).parents[2] / "docs/schema-v1.sql").read_text()
+    assert SCHEMA == snapshot
+    assert hashlib.sha256(snapshot.encode()).hexdigest() == (
+        "26164661686f9a8dfaecb60a02d96e801f2ff6d0cd6a0d024856736b4f879a59"
+    )
 
 
 def test_schema_version_and_foreign_keys(tmp_path):

@@ -1,3 +1,3 @@
-"""InferencePilot: experimental serving comparisons, built milestone by milestone."""
+"""InferencePilot: reproducible serving experiments and tested recommendations."""
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"

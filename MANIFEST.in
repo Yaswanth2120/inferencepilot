@@ -1,0 +1,8 @@
+include AGENTS.md DECISIONS.md EXPLAINED.md CHANGELOG.md Makefile
+include .github/workflows/ci.yml
+recursive-include docs *.md *.sql
+recursive-include configs *.yaml
+recursive-include scripts *.py *.sh
+recursive-include tests *.py *.json *.jsonl *.log *.gz
+recursive-include reports *.md *.json *.png
+global-exclude __pycache__ *.py[cod] .DS_Store

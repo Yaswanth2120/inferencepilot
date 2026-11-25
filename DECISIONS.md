@@ -768,3 +768,27 @@ locally without starting a GPU. M11 release/version/tag work remains separate.
 Visual review found overlapping configuration names in the generated nine-config
 plots. Rerender only their presentation with count-dependent width and angled labels;
 leave report Markdown/JSON statistics unchanged and retain original archived plots.
+
+### M11 release scope and packaging
+
+Release v0.1.0 with the completed Qwen evidence and existing GPT-OSS performance
+subset. The optional GPT-OSS cold-start/context/OOM probes are deliberately omitted
+as requested, labelled not run (needs GPU), and do not block the release. No rental
+access is needed. Publish on GitHub with tested wheel/source assets and checksums;
+PyPI publishing is not part of this release request.
+
+Keep SQLite schema version 1 independent of package version 0.1.0. Freeze the exact
+DDL in docs/schema-v1.sql with a hash guard, preserving the existing version-mismatch
+behavior and introducing no migration. Package metadata now includes the README
+and repository URLs. The source archive explicitly includes docs/configs/scripts/
+tests/reports; raw data, local environments and credentials stay excluded.
+
+Expose the package version through argparse --version and verify code/installed
+metadata agreement in CI. Every existing matrix job also builds a wheel. Validate
+the README in a clean GitHub clone, and validate the actual wheel in a separate
+virtualenv outside the source checkout before creating the release tag.
+
+The candidate build exposed setuptools' deprecated table-style license metadata,
+with support ending in February 2027. Use the existing build dependency at >=77
+and SPDX `MIT` plus an explicit LICENSE file. This adds no runtime dependency and
+keeps the same license while avoiding an imminent build-metadata incompatibility.

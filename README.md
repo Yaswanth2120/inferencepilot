@@ -53,10 +53,11 @@ assessment, and constraint-based recommendations. See the
 - [x] Pinned Qwen3 baseline startup, detailed benchmark, and harness fixtures.
 - [x] Qwen3-8B live campaign, verified archive, final comparisons and recommendation:
   605 valid reps, 110,000 requests, 11 launches.
-- [ ] Complete optional GPT-OSS cold-start and context/OOM-boundary experiments.
-- [ ] Final release review and `v0.1.0`.
+- [ ] Optional GPT-OSS cold-start/context experiments: intentionally outside v0.1.0.
+  **Not run (needs GPU).**
+- [x] v0.1.0 packaging and verification workflow, CLI version checks, and frozen schema v1.
 
-The package is currently **0.0.1**. Latest local verification: **316 tests passed**
+The package version is **0.1.0** ([release downloads](https://github.com/Yaswanth2120/inferencepilot/releases/tag/v0.1.0)). Latest local verification: **317 tests passed**
 and `ruff check .` passed. The Qwen3 campaign completed on one A100 80 GB in
 19.51 wall-clock hours, within its 22-hour cap. All performance points and five
 reps were retained; quality used the same first 200 GSM8K problems. The final
@@ -311,6 +312,18 @@ The implemented scope is single-GPU vLLM serving. Multi-GPU orchestration, other
 engines, training or producing quantized checkpoints, Kubernetes, rental management, and a
 web UI are outside the project scope. Recommendations always refer to the
 **best tested configuration under the stated constraints**, with uncertainty visible.
+
+## Release and storage compatibility
+
+The [v0.1.0 release](https://github.com/Yaswanth2120/inferencepilot/releases/tag/v0.1.0)
+provides a wheel, source archive and SHA-256 checksums. The source archive includes
+configs, runbooks, tests, fixtures and published reports. The standalone wheel
+contains the CLI and fake executables; install the dev extra to run its selftest.
+
+SQLite **schema version 1 is frozen**, separately from the package version. See
+[the storage contract](docs/SCHEMA.md); unknown versions are rejected rather than
+automatically migrated. [CHANGELOG.md](CHANGELOG.md) records the release scope and
+intentional omissions. `inferencepilot --version` prints the installed code version.
 
 ## Documentation and license
 
