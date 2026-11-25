@@ -248,3 +248,17 @@ reference sample files must remain available for paired comparisons and resume.
 Repeated baseline launches still provide independent performance observations,
 not additional independent GSM8K samples. Agreement checks continue per launch.
 Only offline fake coverage has verified these new paths so far.
+
+## Small quality pilot before the campaign
+
+After measured calibration and hardware probes, run
+`python scripts/live_pilot.py --config data/measured.yaml --out data/pilot` in the
+isolated live environment. This starts and tears down one owned baseline server,
+checks returned token IDs on two prompts, and parses the first 16 GSM8K problems.
+Inspect `pilot.json` and the harness log before committing to the long campaign.
+Pilot timings include harness setup and are preliminary budget evidence; the pilot
+does not replace the campaign's quality evaluation or baseline replication.
+
+The detached launcher also accepts `--quality-limit N` when a measured budget
+requires a fixed first-N GSM8K subset. Omit it for all 1,319 problems. Record the
+budget reason before evaluation; resume uses the runner's persisted protocol.

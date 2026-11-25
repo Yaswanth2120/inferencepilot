@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import subprocess
@@ -86,3 +87,69 @@ def test_calibration_against_fake_server(tmp_path, monkeypatch):
     assert measured["calibration"]["source"] == "measured"
     assert measured["calibration"]["rep_seconds"]["chat@1"] > 0
     assert "Calibration saved" in result.stdout
+
+
+def test_quality_pilot_against_fake_server(tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", os.environ["PATH"])
+    fake_path()
+    config = tmp_path / "experiment.yaml"
+    config.write_text(yaml.safe_dump(mini_plan().experiment.model_dump(mode="json")))
+    directory = tmp_path / "pilot"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/live_pilot.py"),
+            "--config",
+            str(config),
+            "--out",
+            str(directory),
+            "--quality-limit",
+            "4",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    evidence = json.loads((directory / "pilot.json").read_text())
+    assert evidence["status"] == "ok"
+    assert evidence["filters"]["flexible-extract"]["n"] == 4
+    assert len(evidence["outputs"]) == 2
+    assert evidence["launch"]["cleanup_complete"]
+    assert '"status": "ok"' in result.stdout
+
+
+def test_pilot_harness_failure_preserves_cleanup_evidence(tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", os.environ["PATH"])
+    fake_path()
+    binaries = tmp_path / "bin"
+    binaries.mkdir()
+    harness = binaries / "lm_eval"
+    harness.write_text("#!/bin/sh\nexit 7\n")
+    harness.chmod(0o755)
+    monkeypatch.setenv("PATH", str(binaries) + os.pathsep + os.environ["PATH"])
+    config = tmp_path / "experiment.yaml"
+    config.write_text(yaml.safe_dump(mini_plan().experiment.model_dump(mode="json")))
+    directory = tmp_path / "pilot"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/live_pilot.py"),
+            "--config",
+            str(config),
+            "--out",
+            str(directory),
+            "--quality-limit",
+            "4",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    evidence = json.loads((directory / "pilot.json").read_text())
+    assert result.returncode != 0
+    assert evidence["status"] == "failed"
+    assert evidence["launch"]["cleanup_complete"]
+    assert len(evidence["outputs"]) == 2
+    assert "command exited 7" in result.stderr

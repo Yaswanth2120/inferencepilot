@@ -242,10 +242,15 @@ Fresh-clone audit (2026-11-24): new virtualenv install with `.[dev,report]`, **2
 tests passed**, Ruff passed, standalone selftest passed. M11's install/quickstart
 check is verified; the release remains gated on the pending work in the audit.
 
-## Offline readiness fixes and GPU hold
+## Offline readiness fixes and live commissioning
 
-GPU access is on hold until the owner explicitly authorizes it again. These changes
-were tested locally against fake tools; the rental is not contacted or modified.
+The owner reauthorized GPU access on 2026-11-24. Isolated M9 commissioning has
+started: the pinned vLLM 0.15.1 doctor, eight calibration reps, both FP8 load probes
+and the small quality/token-ID pilot passed. Forced AWQ/BF16 was rejected by the
+pinned engine. The full design exceeds the 14-hour cap; prepared budget/scope
+options await the owner. M9 remains unchecked until its
+results are verified and backed up. The earlier fixes below were tested locally
+against fake tools during the GPU hold.
 
 `run --evidence synthetic|live|unverified` records an explicit declaration. The
 default and legacy databases are unverified; no GPU name/calibration heuristic

@@ -4,10 +4,12 @@ The offline implementation and a separate existing-server GPT-OSS performance ru
 are verified. The original v0.1.0 definition of finished is **not yet met**.
 No additional GPU work or rental-control action was performed for this audit.
 
-**GPU access is on hold by owner instruction.** Another project is using the rental.
-Do not connect to it, poll it, deploy to it, start GPU work, or stop its services
-until the owner explicitly authorizes access again. Subsequent fixes below were
-implemented and tested locally using fakes only.
+**GPU access was reauthorized by the owner on 2026-11-24.** M9 commissioning
+uses a separate checkout and virtualenv, preserving the other project's environment.
+The A100 was idle at preflight, and the isolated vLLM 0.15.1 doctor passed with all
+required flags. Baseline calibration, variant probes and a small quality/token-ID
+pilot precede the full campaign. Commissioning is in progress; no Qwen campaign
+completion is claimed. Earlier readiness fixes below were tested locally using fakes.
 
 ## Verified evidence
 
@@ -35,8 +37,8 @@ The full raw/DB/log archive is under the gitignored
 | Scope | Verified status | What remains | GPU needed? |
 |---|---|---|---|
 | M0–M8 | Implemented and tested offline | Offline readiness differences fixed; validate them on hardware only after new authorization | No for code fixes |
-| M9 Qwen campaign | Scripts, resume tests and runbook prepared; campaign not run | Measured calibration; hardware probes; three independent baseline launches; OFAT/combined/eager runs; chat/RAG/prefix and open-loop data; quality/agreement; real A/A/MDE/corrected comparisons; constrained recommendation | Yes |
-| M9 fixtures | One real GPT-OSS vLLM 0.32 smoke fixture committed | Capture actual main-pipeline startup, detailed benchmark and harness fixtures for the chosen supported version; replace or document the provisional fixtures | GPU to capture missing evidence; local work afterward |
+| M9 Qwen campaign | Isolated live doctor passed; commissioning started | Finish calibration, hardware probes and quality pilot; then three independent baseline launches, OFAT/combined/eager runs, chat/RAG/prefix and open-loop data, quality/agreement, real A/A/MDE/corrected comparisons and constrained recommendation | Yes |
+| M9 fixtures | Real pinned Qwen baseline startup, detailed benchmark and harness samples, plus the prior GPT-OSS smoke fixture | Finish quantized/failure coverage and full-campaign review; documented synthetic edge cases remain | Mostly local work; GPU if further evidence is needed |
 | M10 optional GPT-OSS | Existing-server chat/RAG measurements at client concurrency 1/8/32 completed | Cold startup timing, controlled server restarts, context/OOM-boundary checks and actual batching-capable configurations were not measured | Yes if completing this optional scope |
 | M11 release | Six-job CI and project docs exist | Finish live evidence and final review; freeze schema, set release version and publish/tag v0.1.0 | No for packaging/docs; release depends on M9 |
 
@@ -115,3 +117,42 @@ A standard isolated pyproject build produced a 0.0.1 wheel; it was installed int
 a separate local environment without an editable path, and its full standalone
 selftest passed. Synthetic chart provenance labelling was visually checked.
 These checks do not authorize or substitute for new hardware validation.
+
+## Current M9 commissioning job
+
+The owned baseline server passed health/model checks on localhost port 18000;
+its real startup log is committed as a parser fixture. All eight closed-loop
+calibration reps passed raw-metric cross-checks. Online FP8 and the FP8 checkpoint
+loaded successfully. Forced `awq` with BF16 failed: pinned vLLM requires FP16 for
+that method. This is a requested-config limitation, not evidence that the A100
+cannot serve AWQ. The specified dtype/method were preserved and the failure saved.
+The first-16 GSM8K/two-prompt token-ID pilot passed, with both quality filters
+parsed successfully. Every owned server was torn down; GPU memory returned to zero.
+
+The launch gate records its estimates in `data/m9-bootstrap/launch-gate.json`.
+It prefers full GSM8K, permits the fixed first 200 problems if required by the
+measured estimate, and launches the complete planned schedule only if the estimate
+fits the 14-hour campaign cap. Otherwise it records `needs_review` and leaves the
+main campaign unstarted. Estimates include open-loop, quality, agreement, a stated
+CLI allowance and contingency; runtime is not guaranteed. No factors or reps are
+silently dropped to make the estimate fit. The full schedule exceeded the cap:
+20.89 estimated hours with first-200 quality, or 25.84 with all 1,319 problems.
+Three concrete plans are saved: reduced 14-hour cap (11.53 estimated hours,
+omitting chat concurrency-1 comparisons), full performance/first-200 quality with
+a proposed 22-hour cap, or full performance/full quality with a proposed 28-hour
+cap. The GPU is idle pending the owner's budget/scope choice; no main campaign
+has started. The reduced option would leave original M9 coverage incomplete.
+
+A local monitor snapshots SQLite and pulls artifacts every ten minutes for up to
+16 hours, independent of this chat while the local computer stays awake and online.
+Its first backup succeeded. The local archive is under
+`data/live/qwen3-20261124/archive/`; remote commissioning lives under
+`/workspace/inferencepilot-m9/data/m9-bootstrap/`. Jobs do not manage rental billing.
+
+Commissioning-change verification: a fresh local virtualenv passed **306 tests in
+106.93 seconds**, and `ruff check .` passed. Real startup, detailed benchmark and
+harness fixtures are included; 57 focused parser tests also passed after log
+whitespace normalization. The archived SQLite backup passed integrity checking,
+and all eight raw calibration reps were re-parsed and cross-checked locally.
+Main-campaign comparisons/recommendation remain **not run (needs GPU)** under the
+selected budget/scope; no full M9 report or release is claimed.

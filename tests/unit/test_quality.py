@@ -13,6 +13,17 @@ from inferencepilot.quality import (
 )
 
 
+def test_real_pinned_harness_sample_schema():
+    path = Path(__file__).resolve().parents[1] / "fixtures/real/qwen3_lmeval_0492_samples.jsonl"
+    samples = read_samples(path, expected_n=16)
+    summary = quality_summary(samples)
+    for kind in ("strict-match", "flexible-extract"):
+        assert summary[kind]["n"] == 16
+        assert summary[kind]["correct"] == 14
+        assert summary[kind]["accuracy"] == 0.875
+        assert paired_quality(samples, samples)[kind]["mcnemar_p"] == 1
+
+
 def test_quality_command_snapshot():
     assert quality_command("Qwen/Qwen3-8B", 8000, "data/quality", limit=4, seed=7) == [
         "lm_eval",
