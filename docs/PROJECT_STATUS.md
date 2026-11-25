@@ -179,3 +179,15 @@ limit 200 and explicit live provenance. The initial DB/job archive was pulled of
 box and passed SQLite integrity plus saved-option checks. No completed campaign
 rep was yet claimed at this checkpoint. The launch documentation update passed
 `pytest -q` (**306 passed in 116.73 seconds**) and `ruff check .`.
+
+## Combined-candidate recovery
+
+After 440 valid reps (80,000 requests), selection of the combined candidate failed
+because independent field selection mixed online FP8 with the checkpoint model.
+The precision tuple (variant/model/quantization) is now selected atomically from
+one measured candidate. Scheduling choices and all statistical thresholds remain
+unchanged. Six regression cases cover both precision winners, baseline fallback,
+and both iteration orders; the full suite passed 312 tests in 156.66 seconds,
+with Ruff passing. Replay of the saved 440-rep data produces a valid combined config.
+The local recovery archive passed SQLite integrity checking. Resume retains the
+original experiment and creation-time 22-hour deadline, including downtime.

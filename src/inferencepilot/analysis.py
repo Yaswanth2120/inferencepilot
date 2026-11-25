@@ -86,20 +86,29 @@ def combined_spec(records, baseline):
             )
     baseline_id = next(c["id"] for c in records["configs"] if c["role"] == "baseline")
     reference = max(scores.get(baseline_id, [float("inf")]))
+    weight_fields = ("variant", "model", "quantization")
+    weights = {key: baseline.model_dump()[key] for key in weight_fields}
+    weight_score = reference
     chosen = {}
     for identity, values in scores.items():
         config = configs[identity]
         if config["role"] != "candidate" or max(values) <= reference:
             continue
         spec = json.loads(config["spec"])
+        if max(values) > weight_score and any(
+            spec[key] != baseline.model_dump()[key] for key in weight_fields
+        ):
+            weights = {key: spec[key] for key in weight_fields}
+            weight_score = max(values)
         for key, value in spec.items():
             if (
-                value != baseline.model_dump()[key]
+                key not in weight_fields
+                and value != baseline.model_dump()[key]
                 and max(values) > chosen.get(key, (reference, None))[0]
             ):
                 chosen[key] = (max(values), value)
     return ConfigSpec.model_validate(
-        {**baseline.model_dump(), **{k: v[1] for k, v in chosen.items()}}
+        {**baseline.model_dump(), **weights, **{k: v[1] for k, v in chosen.items()}}
     )
 
 

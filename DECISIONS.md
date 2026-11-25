@@ -735,3 +735,13 @@ progress graphic reports counts, not runtime completion or final Qwen findings.
 Commit its source counts and generator so it can be refreshed reproducibly. Final
 Qwen throughput, latency, quality and regression visuals belong with the verified
 completed campaign report; do not substitute synthetic plots for those results.
+
+### M9 combined precision recovery
+
+The live run stopped after 440 valid reps while selecting the combined candidate.
+The builder ranked individual fields independently, mixing the higher-scoring
+online-FP8 variant with the checkpoint model from a lower-scoring candidate.
+Treat variant/model/quantization as one indivisible observed factor level; scheduling
+factors remain independently selected. No thresholds, recorded measurements, factor
+scores or experiment budget are changed. Resume the original experiment under its
+original creation-time 22-hour deadline; do not rerun committed reps.
