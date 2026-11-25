@@ -715,3 +715,13 @@ A concrete reduced proposal (11.53 hours; same eleven launches and five reps,
 first-200 quality, omit closed-loop chat concurrency 1) is available, but does not
 meet the original full-point M9 scope. No budget increase or reduced scope is
 assumed from silence; the owner was asked to choose among the three saved plans.
+
+### Approved M9 execution budget
+
+After recommending the 22-hour-cap plan (all performance points, fixed first-200
+GSM8K subset, 20.89-hour estimate), the owner replied "no go ahead". Proceed with
+that concrete recommendation: preserve every performance point and all five reps,
+retain the AWQ/BF16 failure, and use the same first-200 quality protocol throughout.
+The detached worker has a 22-hour workflow deadline; local ten-minute backups were
+extended to 26 hours with idle-sleep prevention while the monitor is alive. Neither
+deadline stops rental billing. This approval does not extend to rental destruction.

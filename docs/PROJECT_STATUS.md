@@ -140,11 +140,13 @@ silently dropped to make the estimate fit. The full schedule exceeded the cap:
 Three concrete plans are saved: reduced 14-hour cap (11.53 estimated hours,
 omitting chat concurrency-1 comparisons), full performance/first-200 quality with
 a proposed 22-hour cap, or full performance/full quality with a proposed 28-hour
-cap. The GPU is idle pending the owner's budget/scope choice; no main campaign
-has started. The reduced option would leave original M9 coverage incomplete.
+cap. After the 22-hour/full-performance/first-200 option was recommended, the owner
+instructed us to proceed. That plan is now running under the detached supervisor;
+all performance points and five reps remain. The reduced option was not selected.
 
 A local monitor snapshots SQLite and pulls artifacts every ten minutes for up to
-16 hours, independent of this chat while the local computer stays awake and online.
+26 hours from campaign launch, independent of this chat while the local computer
+stays awake and online. Idle-sleep prevention follows the monitor's lifetime.
 Its first backup succeeded. The local archive is under
 `data/live/qwen3-20261124/archive/`; remote commissioning lives under
 `/workspace/inferencepilot-m9/data/m9-bootstrap/`. Jobs do not manage rental billing.
@@ -154,5 +156,26 @@ Commissioning-change verification: a fresh local virtualenv passed **306 tests i
 harness fixtures are included; 57 focused parser tests also passed after log
 whitespace normalization. The archived SQLite backup passed integrity checking,
 and all eight raw calibration reps were re-parsed and cross-checked locally.
-Main-campaign comparisons/recommendation remain **not run (needs GPU)** under the
-selected budget/scope; no full M9 report or release is claimed.
+Main-campaign comparisons/recommendation remain **not run (needs GPU)** until the
+running campaign supplies its evidence; no full M9 report or release is claimed.
+
+## Approved main-campaign launch
+
+The owner said "no go ahead" after the 22-hour option was recommended. The selected
+`full22-plan.json` retains all eight closed-loop points, deferred open-loop chat,
+three independent baseline launches, randomized candidates, combined configuration
+and seeded eager regression. AWQ's exact failed probe stays visible. GSM8K uses
+the same first 200 problems for every measured precision/combined evaluation.
+
+The remote job state is `data/m9-campaign/job/status.json`, with a consistent
+SQLite/raw archive pulled locally under `data/live/qwen3-20261124/archive/campaign/`.
+The worker enforces a 22-hour workflow deadline and runner cap, checkpoints progress,
+and attempts analysis/report generation afterward. Completion remains unverified;
+the runtime estimate is not a guarantee. Rental stop/destroy is not automated.
+
+Launch verification: doctor passed again, the first baseline became healthy in
+53.60 seconds, and the persisted experiment is `running` with budget 22.0, quality
+limit 200 and explicit live provenance. The initial DB/job archive was pulled off
+box and passed SQLite integrity plus saved-option checks. No completed campaign
+rep was yet claimed at this checkpoint. The launch documentation update passed
+`pytest -q` (**306 passed in 116.73 seconds**) and `ruff check .`.

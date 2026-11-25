@@ -247,8 +247,9 @@ check is verified; the release remains gated on the pending work in the audit.
 The owner reauthorized GPU access on 2026-11-24. Isolated M9 commissioning has
 started: the pinned vLLM 0.15.1 doctor, eight calibration reps, both FP8 load probes
 and the small quality/token-ID pilot passed. Forced AWQ/BF16 was rejected by the
-pinned engine. The full design exceeds the 14-hour cap; prepared budget/scope
-options await the owner. M9 remains unchecked until its
+pinned engine. After reviewing the budget options, the owner authorized the full
+performance schedule with a 22-hour cap and first-200 quality subset (20.89 hours
+estimated). The detached campaign has started. M9 remains unchecked until its
 results are verified and backed up. The earlier fixes below were tested locally
 against fake tools during the GPU hold.
 
